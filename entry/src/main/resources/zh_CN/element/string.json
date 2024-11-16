@@ -1,0 +1,32 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Edge Music"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "Edge Music"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "云享社"
+    },
+    {
+      "name": "reason_keep_background_running",
+      "value": "熄屏播放"
+    },
+    {
+      "name": "star",
+      "value": "发现"
+    },
+    {
+      "name": "library",
+      "value": "音乐库"
+    },
+    {
+      "name": "cached",
+      "value": "已缓存"
+    }
+  ]
+}

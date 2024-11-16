@@ -1,0 +1,32 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Edge Music"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "Edge Music"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "Cloud Sharing Community"
+    },
+    {
+      "name": "reason_keep_background_running",
+      "value": "Play when the screen is off"
+    },
+    {
+      "name": "star",
+      "value": "Discover"
+    },
+    {
+      "name": "library",
+      "value": "Music Library"
+    },
+    {
+      "name": "cached",
+      "value": "Cached"
+    }
+  ]
+}
