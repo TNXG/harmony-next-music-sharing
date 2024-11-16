@@ -7,6 +7,7 @@ import { promptAction, router } from '@kit.ArkUI'
 import { globalPlaylist } from '../common/GlobalPlayListManager'
 import { DailySong } from '../type/Song'
 import { Artist } from '../type/Toplist'
+import { getPersonalizedFM } from '../api/Personalized'
 
 interface CurrentDate {
   day: number;
@@ -15,19 +16,23 @@ interface CurrentDate {
 
 @Entry
 @Component
-struct Daily {
-  @StorageLink("DailySong") dailySong: DailySong[] | null = null
+struct PersonalFm {
+  @StorageLink("PersonalFm") dailySong: DailySong[] | null = null
   @StorageLink("Profile") profile: AccountProfile | null = null
   @StorageLink("Track") track: TrackAndPrivilege | null = null
   @State scrollY: number = 0
   @State appearItems: number[] = []
   @State isLoading: boolean = true
 
-  aboutToAppear() {
+  async aboutToAppear() {
     if (!this.profile) {
       promptAction.showToast({ message: "需要登录" })
       router.back()
+    } else {
+      const data =  await getPersonalizedFM()
+      this.dailySong = data.data
     }
+
     // 添加动画效果
     setTimeout(() => {
       this.isLoading = false
@@ -265,7 +270,7 @@ struct Daily {
             })
 
             Column() {
-              Text("今日推荐")
+              Text("私人FM")
                 .fontSize(22)
                 .fontWeight(FontWeight.Bold)
                 .maxLines(2)

@@ -6,6 +6,7 @@
     "pages/Splash",
     "pages/Daily",
     "pages/Setting",
-    "pages/About"
+    "pages/About",
+    "pages/PersonalFm"
   ]
 }

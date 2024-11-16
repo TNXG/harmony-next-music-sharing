@@ -6,7 +6,7 @@ import app from '@system.app';
 import { PreferencesUtil } from '../common/PreferenceUtil';
 import { getToplistAlbum, getToplistArtist } from '../api/Toplist';
 import { getNewAlbumList } from '../api/Album';
-import { getPersonalizedCollection } from '../api/Personalized';
+import { getPersonalizedCollection, getPersonalizedFM } from '../api/Personalized';
 import { AccountProfile } from '../type/Account';
 import Constant from '../common/Constant';
 import Logger from '../common/Logger';

@@ -92,6 +92,7 @@ export interface Privilege {
 
 // 推荐歌曲信息
 export interface DailySong {
+  item: Artist | undefined;
   name: string;
   id: number;
   ar: Artist[];
@@ -107,6 +108,10 @@ export interface DailySong {
   recommendReason?: string;
   privilege?: Privilege;
   originSongSimpleData?: OriginSongData;
+
+  // 兼容FM
+  album?: Album;
+  artists?: Artist
 }
 
 // 歌曲详情接口

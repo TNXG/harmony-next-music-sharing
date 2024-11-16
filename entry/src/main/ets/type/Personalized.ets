@@ -1,3 +1,5 @@
+import { DailySong } from "./Song";
+
 /**
  * 个性化推荐歌单项目接口
  * 用于描述每个推荐歌单的详细信息
@@ -52,4 +54,11 @@ export interface Personalized {
   category: number;
   /** 推荐歌单列表 */
   result: PersonalizedPlaylist[];
+}
+
+export interface FMResponse {
+  popAdjust: boolean;
+  data: Array<DailySong>;
+  tag: string | null;
+  code: number;
 }

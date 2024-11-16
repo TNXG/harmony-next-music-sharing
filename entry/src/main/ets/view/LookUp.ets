@@ -17,7 +17,6 @@ export struct LookUp {
   @StorageLink("ToplistArtistList") toplistArtistList: Artist[] | undefined = []
   @StorageLink("NewAlbumList") newAlbumList: Album[] | undefined = []
   @StorageLink("TopListAlbumList") topListAlbumList: Playlist[] | undefined = []
-
   @State isRefreshing: boolean = false
   @State loadingContent: boolean = true
 
@@ -218,7 +217,9 @@ export struct LookUp {
         Column() {
           PersonalFMCard()
         }.onClick(() => {
-          this.waiting()
+          router.pushUrl({
+            url: "pages/PersonalFm",
+          })
         })
       }
       .padding(16)
@@ -391,6 +392,9 @@ export struct LookUp {
     Column() {
       SearchBar({
         // rightSlot: this.Refresh
+        onSearch: () => {
+          this.waiting()
+        }
       })
 
       List() {
