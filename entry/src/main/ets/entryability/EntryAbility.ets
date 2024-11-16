@@ -22,6 +22,7 @@ import { checkIfLoved, getRecommendSongs, getSongUrl, likeSong } from '../api/So
 import { util } from '@kit.ArkTS';
 import { avSession } from '@kit.AVSessionKit';
 import { backgroundRunningManager } from '../common/BackgroundRunningManager';
+import { audioFileSaver } from '../common/AudioFileSaver';
 
 // 发现页数据加载
 async function lookup() {
@@ -30,7 +31,8 @@ async function lookup() {
       getPersonalizedCollection(),
       getToplistArtist(),
       getNewAlbumList(),
-      getToplistAlbum()
+      getToplistAlbum(),
+      getRecommendSongs(),
     ]);
 
     const personalizedRes = results[0];
@@ -38,6 +40,9 @@ async function lookup() {
     const newAlbumRes = results[2];
     const topAlbumRes = results[3];
 
+    const recommendSongsRes = results[4];
+
+    AppStorage.setOrCreate('DailySong', recommendSongsRes.data.dailySongs);
     AppStorage.setOrCreate('PersonalizedPlaylist', personalizedRes.result);
     AppStorage.setOrCreate('ToplistArtistList', topArtistRes.list.artists);
     AppStorage.setOrCreate('NewAlbumList', newAlbumRes.albums);
@@ -91,9 +96,15 @@ async function startPlaySong(track: TrackAndPrivilege) {
       }
       // 下载并存储播放
       const url = (await getSongUrl(track.track.id)).data[0].url
+      let fileName = url.split("/").pop() ?? `${util.generateRandomUUID()}`
+      // 可能url后面跟着参数，需要去掉
+      const index = fileName.indexOf("?")
+      if (index > 0) {
+        fileName = fileName.substring(0, index)
+      }
       const path = await downloadManager.downloadFile({
         url,
-        fileName: `${util.generateRandomUUID()}`
+        fileName
       })
       if (path) {
         avPlayerManager.playByPath(path)
@@ -109,9 +120,9 @@ async function startPlaySong(track: TrackAndPrivilege) {
           AppStorage.setOrCreate("Track", track)
         })
         await backgroundRunningManager.startBackgroundRunning();
-        cacheManager.set(`${track.track.id}_${level}`, {
+        cacheManager.set(`${track.track.id}_${confirmLevel}`, {
           id: track.track.id,
-          level,
+          level: confirmLevel,
           name: track.track.name,
           path,
           coverImgUrl: track.track.al.picUrl,
@@ -150,24 +161,6 @@ function getAuth() {
 
   AppStorage.setOrCreate("ValidCookie", isValidCookie)
   AppStorage.setOrCreate('Profile', profile)
-
-  if (isValidCookie) {
-    afterAuth()
-  }
-}
-
-async function afterAuth() {
-  try {
-    const results = await Promise.all([
-      getRecommendSongs(),
-    ]);
-
-    const recommendSongsRes = results[0];
-
-    AppStorage.setOrCreate('DailySong', recommendSongsRes.data.dailySongs);
-  } catch (error) {
-    Logger.warn("Init", error.message)
-  }
 }
 
 function cached() {
@@ -181,6 +174,7 @@ export default class EntryAbility extends UIAbility {
     app.setImageRawDataCacheSize(100 * 1024 * 1024) // 设置解码前图片数据内存缓存上限为100MB
     PreferencesUtil.init(this.context);
     downloadManager.init(this.context)
+    audioFileSaver.init(this.context)
     await avPlayerManager.init(this.context);
 
     let lastTrack: TrackAndPrivilege | null = null;
@@ -266,20 +260,20 @@ export default class EntryAbility extends UIAbility {
     // Main window is created, set main page for this ability
     hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
 
-    // const notFirstStart = PreferencesUtil.get<boolean>("notFirstStart")
-    //
-    // if (!notFirstStart) {
-    //   PreferencesUtil.put("notFirstStart", true)
-    //   PreferencesUtil.put("defaultLevel", "standard")
-    //   windowStage.loadContent('pages/Splash', (err) => {
-    //     if (err.code) {
-    //       hilog.error(0x0000, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err) ?? '');
-    //       return;
-    //     }
-    //     hilog.info(0x0000, 'testTag', 'Succeeded in loading the content.');
-    //   });
-    //   return
-    // }
+    const notFirstStart = PreferencesUtil.get<boolean>("notFirstStart")
+
+    if (!notFirstStart) {
+      PreferencesUtil.put("notFirstStart", true)
+      PreferencesUtil.put("defaultLevel", "standard")
+      windowStage.loadContent('pages/Splash', (err) => {
+        if (err.code) {
+          hilog.error(0x0000, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err) ?? '');
+          return;
+        }
+        hilog.info(0x0000, 'testTag', 'Succeeded in loading the content.');
+      });
+      return
+    }
 
     windowStage.loadContent('pages/Index', (err) => {
       if (err.code) {

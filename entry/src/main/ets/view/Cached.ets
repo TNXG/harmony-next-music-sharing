@@ -5,6 +5,7 @@ import { promptAction } from '@kit.ArkUI'
 import Logger from '../common/Logger'
 import { qualityDescriptions } from '../common/APIHelper'
 import { fileIo as fs } from '@kit.CoreFileKit'
+import { audioFileSaver } from '../common/AudioFileSaver'
 
 interface CacheValue {
   value: SongCache;
@@ -15,7 +16,11 @@ interface CacheList {
   data: CacheValue;
 }
 
-@Entry
+interface ReadOptions {
+  offset: number;
+  length: number;
+}
+
 @Component
 export struct Cached {
   @StorageLink("CacheList") cacheList: Array<CacheList> = []
@@ -33,6 +38,71 @@ export struct Cached {
       promptAction.showToast({ message: '加载缓存数据失败' })
     } finally {
       this.isLoading = false
+    }
+  }
+
+  @Builder
+  SwipeActions(item: CacheList) {
+    Row() {
+      // 保存按钮
+      Button() {
+        Row() {
+          Image($r('app.media.ic_download'))
+            .width(24)
+            .height(24)
+            .fillColor('#666')
+        }
+      }
+      .width(48)
+      .height(48)
+      .backgroundColor(Color.Transparent)
+      .margin({right: 8})
+      .onClick(() => {
+        this.saveAudio(item)
+      })
+
+      this.DeleteButton(item)
+    }
+  }
+
+  private async saveAudio(item: CacheList) {
+    try {
+      // 打开源文件
+      const srcFile = fs.openSync(item.data.value.path, fs.OpenMode.READ_WRITE)
+
+      // 生成文件名
+      const ext = item.data.value.path.split('.').pop() ?? 'mp3'
+      const fileName = `${item.data.value.name}-${item.data.value.artist.join(',')}.${ext}`
+
+      // 获取文件信息以确定大小
+      const fileStats = fs.statSync(item.data.value.path)
+      const fileSize = fileStats.size
+
+      // 创建适当大小的 ArrayBuffer
+      let arrayBuffer = new ArrayBuffer(fileSize)
+      let readOptions: ReadOptions = {
+        offset: 0,
+        length: fileSize
+      }
+
+      // 读取整个文件内容
+      const readLen = fs.readSync(srcFile.fd, arrayBuffer, readOptions)
+
+      // 关闭源文件
+      fs.closeSync(srcFile)
+
+      // 保存音频文件
+      const result = await audioFileSaver.saveAudioFile({
+        fileName: fileName,
+        content: arrayBuffer
+      })
+
+      if (result.success) {
+        promptAction.showToast({ message: '保存成功' })
+      }
+    } catch (error) {
+      Logger.error('Failed to save audio:', error)
+      promptAction.showToast({ message: '保存失败' })
     }
   }
 
@@ -116,12 +186,12 @@ export struct Cached {
         Image($r('app.media.ic_trash'))
           .width(24)
           .height(24)
-          .fillColor(Color.White)
+          .fillColor('#666')
       }
     }
     .width(48)
     .height(48)
-    .backgroundColor('#FF4040')
+    .backgroundColor(Color.Transparent)
     .margin({right:16})
     .onClick(async () => {
       try {
@@ -185,7 +255,7 @@ export struct Cached {
           .backgroundColor(Color.White)
           .borderRadius(12)
         }
-        .swipeAction({ end: this.DeleteButton(item) })
+        .swipeAction({ end: this.SwipeActions(item) })
         .animation({
           duration: 300,
           curve: Curve.EaseInOut
