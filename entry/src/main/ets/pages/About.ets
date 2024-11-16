@@ -1,5 +1,6 @@
 import { StyleConstants } from '../common/Constant'
 import pasteboard from '@ohos.pasteboard';
+import { promptAction } from '@kit.ArkUI';
 
 @Entry
 @Component
@@ -22,7 +23,7 @@ struct About {
       // App Info Card
       Column() {
         // App Icon
-        Image($r('app.media.app_icon'))
+        Image($r('app.media.icon'))
           .width(80)
           .height(80)
           .borderRadius(16)
@@ -84,8 +85,9 @@ struct About {
           .fontSize(14)
           .fontColor('#3478F6')
           .fontWeight(FontWeight.Medium)
-          .onClick(()=>{
+          .onClick(() => {
             pasteboard.createData('text/plain', "https://github.com/Okysu/harmony-next-music-sharing");
+            promptAction.showToast({ message: "已复制到剪切板" })
           })
       }
       .width('100%')
