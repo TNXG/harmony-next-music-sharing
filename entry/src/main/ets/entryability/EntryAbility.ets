@@ -18,7 +18,7 @@ import { TrackAndPrivilege } from '../type/Playlist';
 import { globalPlaylist, PlayMode } from '../common/GlobalPlayListManager';
 import { cacheManager } from '../common/CacheManager';
 import { cover, getSupportedQuality, QualityLevel } from '../common/APIHelper';
-import { checkIfLoved, getRecommendSongs, getSongUrl, likeSong } from '../api/Song';
+import { checkIfLoved, getRecommendSongs, getSongLyric, getSongUrl, likeSong } from '../api/Song';
 import { util } from '@kit.ArkTS';
 import { avSession } from '@kit.AVSessionKit';
 import { backgroundRunningManager } from '../common/BackgroundRunningManager';
@@ -67,12 +67,81 @@ async function library() {
   }
 }
 
+async function getLyric (id: number| string) {
+  const res = await getSongLyric(id);
+  AppStorage.setOrCreate("Lyrics", res)
+  EventBus.send("LyricsUpdated")
+}
+
+// 记录当前正在缓存的歌曲ID
+let currentCachingId: string | number | null = null;
+
+async function cacheNextSong() {
+  try {
+    const nextTrack = globalPlaylist.getNext()
+    if (!nextTrack) return
+
+    const level = PreferencesUtil.get<QualityLevel>("defaultLevel") ?? "standard"
+    const confirmLevel = getSupportedQuality(nextTrack.privilege.dlLevel as QualityLevel, level)
+    const cache = cacheManager.get(`${nextTrack.track.id}_${confirmLevel}`)
+
+    if (cache || nextTrack.privilege.st < 0) {
+      return
+    }
+
+    currentCachingId = nextTrack.track.id;
+
+    const url = (await getSongUrl(nextTrack.track.id)).data[0].url
+    if (!url) return
+
+    let fileName = url.split("/").pop() ?? `${util.generateRandomUUID()}`
+    const index = fileName.indexOf("?")
+    if (index > 0) {
+      fileName = fileName.substring(0, index)
+    }
+
+    const path = await downloadManager.downloadFile({
+      url,
+      fileName
+    })
+
+    if (path) {
+      cacheManager.set(`${nextTrack.track.id}_${confirmLevel}`, {
+        id: nextTrack.track.id,
+        level: confirmLevel,
+        name: nextTrack.track.name,
+        path,
+        coverImgUrl: nextTrack.track.al.picUrl,
+        artist: nextTrack.track.ar.map(item => item.name)
+      })
+    }
+    currentCachingId = null;
+  } catch (e) {
+    currentCachingId = null;
+    hilog.error(0x0000, 'CacheNextSong', 'Failed to cache next song: %{public}s', JSON.stringify(e))
+  }
+}
+
 async function startPlaySong(track: TrackAndPrivilege) {
   try {
+    // 如果当前正在缓存这首歌，等待缓存完成
+    if (currentCachingId === track.track.id) {
+      // 等待当前缓存任务完成
+      await new Promise<boolean>(resolve => {
+        const checkCache = setInterval(() => {
+          if (!currentCachingId || currentCachingId !== track.track.id) {
+            clearInterval(checkCache);
+            resolve(true);
+          }
+        }, 100);
+      });
+    }
+
     const level = PreferencesUtil.get<QualityLevel>("defaultLevel") ?? "standard"
-    const confirmLevel = getSupportedQuality(track.privilege.maxBrLevel as QualityLevel, level)
+    const confirmLevel = getSupportedQuality(track.privilege.dlLevel as QualityLevel, level)
     const cache = cacheManager.get(`${track.track.id}_${confirmLevel}`)
-    hilog.info(0x0000, 'testTag', 'Test Get Cache: %{public}s', JSON.stringify(cache));
+    const autoCache = PreferencesUtil.get<boolean>("autoCache") ?? false;
+
     if (cache) {
       avPlayerManager.playByPath(cache.path)
       avPlayerManager.clearListener('onDurationChange')
@@ -85,19 +154,23 @@ async function startPlaySong(track: TrackAndPrivilege) {
           artist: cache.artist.join("/")
         })
         AppStorage.setOrCreate("Track", track)
+        getLyric(track.track.id)
+        if (autoCache) {
+          cacheNextSong()
+        }
       })
       await backgroundRunningManager.stopBackgroundRunning();
       await backgroundRunningManager.startBackgroundRunning();
     } else {
       if (track.privilege.st < 0) {
-        // 平台原因没有音源，直接下一首
         globalPlaylist.playNext()
         return
       }
-      // 下载并存储播放
+
+      // 直接下载当前歌曲
+      currentCachingId = track.track.id;
       const url = (await getSongUrl(track.track.id)).data[0].url
       let fileName = url.split("/").pop() ?? `${util.generateRandomUUID()}`
-      // 可能url后面跟着参数，需要去掉
       const index = fileName.indexOf("?")
       if (index > 0) {
         fileName = fileName.substring(0, index)
@@ -106,6 +179,9 @@ async function startPlaySong(track: TrackAndPrivilege) {
         url,
         fileName
       })
+
+      currentCachingId = null;
+
       if (path) {
         avPlayerManager.playByPath(path)
         avPlayerManager.clearListener('onDurationChange')
@@ -118,6 +194,10 @@ async function startPlaySong(track: TrackAndPrivilege) {
             artist: track.track.ar.map(item => item.name).join("/")
           })
           AppStorage.setOrCreate("Track", track)
+          getLyric(track.track.id)
+          if (autoCache) {
+            cacheNextSong()
+          }
         })
         await backgroundRunningManager.startBackgroundRunning();
         cacheManager.set(`${track.track.id}_${confirmLevel}`, {

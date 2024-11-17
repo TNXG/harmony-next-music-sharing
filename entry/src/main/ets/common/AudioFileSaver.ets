@@ -2,6 +2,7 @@ import { picker } from '@kit.CoreFileKit';
 import { fileIo as fs } from '@kit.CoreFileKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { common } from '@kit.AbilityKit';
+import Logger from './Logger';
 
 interface AudioSaveResult {
   success: boolean;
@@ -21,12 +22,18 @@ class AudioFileSaver {
   private lastSavedUri: string;
   private fileDescriptor: number;
   private initialized: boolean;
+  private hasPermission: boolean;
+  private permissionUri: string;
+  private permissionDirectory: string;
 
   private constructor() {
     this.context = null;
     this.lastSavedUri = '';
     this.fileDescriptor = -1;
     this.initialized = false;
+    this.hasPermission = false;
+    this.permissionUri = '';
+    this.permissionDirectory = '';
   }
 
   /**
@@ -82,7 +89,7 @@ class AudioFileSaver {
    * @returns number 文件描述符
    */
   private openFile(uri: string): number {
-    const file = fs.openSync(uri, fs.OpenMode.READ_WRITE);
+    const file = fs.openSync(uri, fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE);
     return file.fd;
   }
 
@@ -101,11 +108,31 @@ class AudioFileSaver {
    * @param fd 文件描述符
    */
   private closeFile(fd: number): void {
-      fs.closeSync(fd);
+    fs.closeSync(fd);
   }
 
   /**
-   * 保存音频文件
+   * 从URI中提取目录路径
+   * @param uri 文件URI
+   * @returns string 目录路径
+   */
+  private extractDirectoryFromUri(uri: string): string {
+    return uri.substring(0, uri.lastIndexOf('/') + 1);
+  }
+
+  /**
+   * 检查并更新权限状态
+   * @param uri 新的URI
+   */
+  private updatePermissionStatus(uri: string): void {
+    this.hasPermission = true;
+    this.permissionUri = uri;
+    this.permissionDirectory = this.extractDirectoryFromUri(uri);
+    Logger.info('AudioFileSaver', `Permission updated: ${this.permissionDirectory}`);
+  }
+
+  /**
+   * 保存音频文件(会弹出选择对话框)
    * @param options 保存选项
    * @returns Promise<AudioSaveResult>
    */
@@ -121,13 +148,16 @@ class AudioFileSaver {
       const result = await audioViewPicker.save(audioSaveOptions);
       this.lastSavedUri = result[0];
 
+      // 更新权限状态
+      this.updatePermissionStatus(this.lastSavedUri);
+
       // 打开文件获取描述符
       this.fileDescriptor = this.openFile(this.lastSavedUri);
 
       // 如果有内容则写入
       if (options.content) {
         const writeLength = this.writeFile(this.fileDescriptor, options.content);
-        console.info('Successfully wrote', writeLength, 'bytes to file');
+        Logger.info('AudioFileSaver', `Successfully wrote ${writeLength} bytes to file`);
       }
 
       // 关闭文件
@@ -140,7 +170,60 @@ class AudioFileSaver {
       };
 
     } catch (error) {
-      console.error('Audio save operation failed:', error);
+      Logger.error('AudioFileSaver', 'Audio save operation failed:', error);
+      return {
+        success: false,
+        uri: '',
+        error: error as BusinessError
+      };
+    }
+  }
+
+  /**
+   * 静默保存音频文件(不弹出选择对话框)
+   * @param options 保存选项
+   * @returns Promise<AudioSaveResult>
+   */
+  public async silentSaveAudioFile(options: AudioSaveOptions): Promise<AudioSaveResult> {
+    this.checkInitialization();
+
+    if (!this.hasPermission) {
+      Logger.info('AudioFileSaver', 'No permission, performing normal save first');
+      return this.saveAudioFile(options);
+    }
+
+    try {
+      const fileName = options.fileName || 'audio_' + Date.now() + '.mp3';
+      // 在已有权限的目录下构建新的URI
+      const newUri = this.permissionDirectory + fileName;
+      Logger.info('AudioFileSaver', `Silent saving to ${newUri}`);
+
+      // 打开文件获取描述符
+      this.fileDescriptor = this.openFile(newUri);
+      this.lastSavedUri = newUri;
+
+      // 如果有内容则写入
+      if (options.content) {
+        const writeLength = this.writeFile(this.fileDescriptor, options.content);
+        Logger.info('AudioFileSaver', `Successfully wrote ${writeLength} bytes to file`);
+      }
+
+      // 关闭文件
+      this.closeFile(this.fileDescriptor);
+
+      return {
+        success: true,
+        uri: newUri,
+        fileDescriptor: this.fileDescriptor
+      };
+
+    } catch (error) {
+      Logger.error('AudioFileSaver', 'Silent save operation failed:', error);
+      // 如果静默保存失败,清除权限状态并返回错误
+      this.hasPermission = false;
+      this.permissionUri = '';
+      this.permissionDirectory = '';
+
       return {
         success: false,
         uri: '',
@@ -168,6 +251,23 @@ class AudioFileSaver {
   }
 
   /**
+   * 检查是否有保存权限
+   * @returns boolean
+   */
+  public hasStoragePermission(): boolean {
+    return this.hasPermission;
+  }
+
+  /**
+   * 清除保存权限
+   */
+  public clearPermission(): void {
+    this.hasPermission = false;
+    this.permissionUri = '';
+    this.permissionDirectory = '';
+  }
+
+  /**
    * 重置实例（主要用于测试）
    */
   public static resetInstance(): void {
@@ -175,5 +275,4 @@ class AudioFileSaver {
   }
 }
 
-
-export const audioFileSaver = AudioFileSaver.getInstance()
+export const audioFileSaver = AudioFileSaver.getInstance();

@@ -82,6 +82,8 @@ struct UrlInputDialog {
 struct Settings {
   @State customApiUrl: string = ''
   @State selectedQuality: keyof LevelType = PreferencesUtil.get<keyof LevelType>('defaultLevel') ?? "standard"
+  @State autoCache: boolean = PreferencesUtil.get<boolean>("autoCache") ?? false
+
   dialogController: CustomDialogController = new CustomDialogController({
     builder: UrlInputDialog({
       cancel: () => {
@@ -98,6 +100,50 @@ struct Settings {
     customStyle: true,
     maskColor: '#00000080'
   })
+
+  @Builder
+  AutoCacheSetting() {
+    Column() {
+      Row() {
+        Column() {
+          Row() {
+            Text('自动缓存下一首')
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+
+            Toggle({ type: ToggleType.Switch, isOn: this.autoCache })
+              .onChange((isOn: boolean) => {
+                this.autoCache = isOn
+                PreferencesUtil.put('autoCache', isOn)
+                promptAction.showToast({
+                  message: isOn ? '已开启自动缓存' : '已关闭自动缓存'
+                })
+              })
+              .margin({ left: 8 })
+          }
+          .width('100%')
+          .justifyContent(FlexAlign.SpaceBetween)
+
+          Text('注意流量，可以提升播放体验')
+            .fontSize(14)
+            .fontColor('#666666')
+            .margin({ top: 4 })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+      }
+      .width('100%')
+      .padding(16)
+      .backgroundColor(Color.White)
+      .borderRadius(12)
+      .shadow({
+        radius: 12,
+        color: '#00000008',
+        offsetX: 0,
+        offsetY: 2
+      })
+    }
+  }
 
   aboutToAppear() {
     // 读取保存的自定义URL
@@ -253,6 +299,7 @@ struct Settings {
         Column({ space: 12 }) {
           this.ApiUrlSetting()
           this.QualitySetting()
+          this.AutoCacheSetting()
         }
         .width('100%')
         .padding(16)

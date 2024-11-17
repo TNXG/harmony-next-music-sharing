@@ -15,6 +15,7 @@ interface RequestInterceptors {
   addRealIp: RequestInterceptorFn;
   handleAuth: RequestInterceptorFn;
   handleError: ErrorHandlerFn;
+  addCrypto: RequestInterceptorFn;
 }
 
 interface ResponseInterceptors {
@@ -71,6 +72,18 @@ const requestInterceptors: RequestInterceptors = {
     return addUrlParameter(config, 'realIp', realIp);
   },
 
+  addCrypto: (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
+    if (config.method?.toUpperCase() === 'POST') {
+      if (!config.data) {
+        config.data = {};
+      }
+      if (typeof config.data === 'object') {
+        config.data.crypto = "eapi";
+      }
+    }
+    return config;
+  },
+
   handleAuth: async (config: InternalAxiosRequestConfig): Promise<InternalAxiosRequestConfig> => {
     Logger.info(TAG, JSON.stringify(config));
 
@@ -119,6 +132,7 @@ const createAxiosInstance = (isAnonymous = false) => {
   // 添加通用拦截器
   instance.interceptors.request.use(requestInterceptors.addTimestamp);
   instance.interceptors.request.use(requestInterceptors.addRealIp);
+  instance.interceptors.request.use(requestInterceptors.addCrypto);
   instance.interceptors.response.use(
     responseInterceptors.handleResponse,
     responseInterceptors.handleError

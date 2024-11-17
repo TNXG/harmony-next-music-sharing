@@ -4,11 +4,11 @@ import { StyleConstants } from '../common/Constant'
 import { SongListCard } from '../component/SongListCard'
 import { getPlayListDetail, getPlayListDetailDynamic } from '../api/Playlist'
 import { AccountProfile } from '../type/Account'
-import { TrackBaseDataSource } from '../viewmodel/TrackDataSource'
 import Logger from '../common/Logger'
 import { getSongDetail, playlistSubscribe } from '../api/Song'
 import { promptAction, router } from '@kit.ArkUI'
 import { globalPlaylist } from '../common/GlobalPlayListManager'
+import { LazyData } from '@pie/lazy-data'
 
 interface BasePlayListInfo {
   name: string
@@ -29,13 +29,14 @@ struct Collection {
   @State trackIds: TrackId[] = []
   @State basePlayListInfo: BasePlayListInfo | null = null
   @State subscribed: boolean = false
-  private dataSource: TrackBaseDataSource = new TrackBaseDataSource()
+  private dataSource: LazyData<Track> = new LazyData();
   private offsetValue = 0
   private isCreator = false
   private allTracks: Track[] = []
   private allPrivileges: Privilege[] = []
   private finished = false;
   private loadAll = false;
+  private privilegeMap = new Map<number | string, Privilege>();
 
   aboutToAppear() {
     if (this.collectionId) {
@@ -58,12 +59,20 @@ struct Collection {
         const songDetail = await getSongDetail(remainingIds);
         this.allTracks.push(...(songDetail.songs as ESObject as Track[]));
         this.allPrivileges.push(...(songDetail.privileges as ESObject as Privilege[]));
-        this.allTracks.forEach((track, index) => {
+
+        // 更新 privilegeMap
+        this.privilegeMap = new Map(
+          this.allPrivileges.map(privilege => [privilege.id, privilege])
+        );
+
+        // 使用 Map 匹配权限添加歌曲
+        this.allTracks.forEach(track => {
           globalPlaylist.addSong({
             track: track,
-            privilege: this.allPrivileges[index]
-          })
-        })
+            privilege: this.privilegeMap.get(track.id)!
+          });
+        });
+
         this.finished = true;
       }
     } catch (error) {
@@ -123,7 +132,6 @@ struct Collection {
       .padding(16)
 
       Column() {
-        // 操作栏骨架
         Row() {
           Row()
             .width(100)
@@ -140,7 +148,6 @@ struct Collection {
         .justifyContent(FlexAlign.SpaceBetween)
         .padding({ left: 16, right: 16, top: 12 })
 
-        // 列表骨架
         ForEach([1, 2, 3, 4, 5], () => {
           Row() {
             Row()
@@ -192,6 +199,11 @@ struct Collection {
       this.allPrivileges = playlistDetailRes.privileges
       this.allTracks = playlistDetailRes.playlist.tracks ?? []
 
+      // 初始化 privilegeMap
+      this.privilegeMap = new Map(
+        this.allPrivileges.map(privilege => [privilege.id, privilege])
+      );
+
       this.finished = this.allTracks.length == this.trackIds.length
 
       this.basePlayListInfo = {
@@ -215,7 +227,7 @@ struct Collection {
             curve: Curve.ExtremeDeceleration
           }, () => {
             this.appearItems.push(index)
-            this.dataSource.pushTrack(track)
+            this.dataSource.pushData(track)
           })
         })
       } else {
@@ -225,7 +237,7 @@ struct Collection {
             curve: Curve.ExtremeDeceleration
           }, () => {
             this.appearItems.push(index)
-            this.dataSource.pushTrack(track)
+            this.dataSource.pushData(track)
           })
         })
       }
@@ -259,12 +271,11 @@ struct Collection {
             curve: Curve.ExtremeDeceleration
           }, () => {
             this.appearItems.push(realIndex)
-            this.dataSource.pushTrack(track)
+            this.dataSource.pushData(track)
           })
         })
         this.offsetValue += nextTracks.length
 
-        // 如果当前数量已经等于总数，那么就不再加载
         if (this.offsetValue >= this.trackIds.length) {
           this.loadAll = true
         }
@@ -276,8 +287,14 @@ struct Collection {
         if (ids.length > 0) {
           const songDetail = await getSongDetail(ids);
           const songs = songDetail.songs;
-          // 更新privileges
-          this.allPrivileges.push(...(songDetail.privileges as ESObject as Privilege[]));
+          const privileges = songDetail.privileges as ESObject as Privilege[];
+
+          // 更新 privileges 和 privilegeMap
+          this.allPrivileges.push(...privileges);
+          privileges.forEach(privilege => {
+            this.privilegeMap.set(privilege.id, privilege);
+          });
+
           songs.forEach((song, index) => {
             const realIndex = this.offsetValue + index
             animateTo({
@@ -285,13 +302,12 @@ struct Collection {
               curve: Curve.ExtremeDeceleration
             }, () => {
               this.appearItems.push(realIndex)
-              this.dataSource.pushTrack(song as ESObject as Track)
+              this.dataSource.pushData(song as ESObject as Track)
             })
           })
           this.offsetValue += songs.length
         }
 
-        // 如果当前数量已经等于总数，那么就不再加载
         if (this.offsetValue >= this.trackIds.length) {
           this.loadAll = true
         }
@@ -323,28 +339,28 @@ struct Collection {
         .backgroundColor(Color.Transparent)
         .height(40)
         .onClick(async () => {
-          // 点击播放全部时，开始加载所有歌曲
           if (!this.isCreator && !this.finished) {
             await this.loadAllTracks();
           }
-          // 添加播放列表
-          const tempSongs: TrackAndPrivilege[] = []
-          this.allTracks.forEach((track, index) => {
-            tempSongs.push({
-              track: track,
-              privilege: this.allPrivileges[index]
-            })
-          })
-          globalPlaylist.overwrite(tempSongs)
+
+          // 使用 privilegeMap 构建播放列表
+          const tempSongs = this.allTracks.map(track => ({
+            track,
+            privilege: this.privilegeMap.get(track.id)!
+          } as TrackAndPrivilege));
+
+          globalPlaylist.overwrite(tempSongs);
+
           // 加载第一首歌
           const info: TrackAndPrivilege = {
             track: this.allTracks[0],
-            privilege: this.allPrivileges[0]
-          }
-          AppStorage.setOrCreate("Track", info)
+            privilege: this.privilegeMap.get(this.allTracks[0].id)!
+          };
+
+          AppStorage.setOrCreate("Track", info);
           router.pushUrl({
             url: "pages/Playing",
-          })
+          });
         })
       }
 
@@ -386,7 +402,7 @@ struct Collection {
         coverUrl: cover(track.al.picUrl, 100),
         index,
         tns: track.tns,
-        disabled: !this.allPrivileges[index] || this.allPrivileges[index].st < 0,
+        disabled: !this.privilegeMap.get(track.id) || this.privilegeMap.get(track.id)!.st < 0,
         active: (!!this.track && this.track.track.id == track.id) ?? false
       })
         .transition({
@@ -401,31 +417,31 @@ struct Collection {
           curve: Curve.ExtremeDeceleration
         })
         .onClick(async () => {
-          if (this.allPrivileges[index] && this.allPrivileges[index].st >= 0) {
-            // 点击列表里面的歌曲时，开始加载所有歌曲
+          const privilege = this.privilegeMap.get(track.id);
+          if (privilege && privilege.st >= 0) {
             if (!this.isCreator && !this.finished) {
               await this.loadAllTracks();
             }
+
             const info: TrackAndPrivilege = {
               track: track,
-              privilege: this.allPrivileges[index]
-            }
-            // 添加播放列表
-            const tempSongs: TrackAndPrivilege[] = []
-            this.allTracks.forEach((track, index) => {
-              tempSongs.push({
-                track: track,
-                privilege: this.allPrivileges[index]
-              })
-            })
-            globalPlaylist.overwrite(tempSongs)
-            globalPlaylist.setCurrentIndex(index)
-            AppStorage.setOrCreate("Track", info)
+              privilege: privilege
+            };
+
+            // 使用 privilegeMap 构建播放列表
+            const tempSongs = this.allTracks.map(track => ({
+              track,
+              privilege: this.privilegeMap.get(track.id)
+            } as TrackAndPrivilege));
+
+            globalPlaylist.overwrite(tempSongs);
+            globalPlaylist.setCurrentIndex(index);
+            AppStorage.setOrCreate("Track", info);
             router.pushUrl({
               url: "pages/Playing",
-            })
+            });
           } else {
-            promptAction.showToast({ message: "灰标歌曲，无法播放" })
+            promptAction.showToast({ message: "灰标歌曲，无法播放" });
           }
         })
     }

@@ -3,7 +3,7 @@ import { cacheManager, CacheStats } from '../common/CacheManager'
 import { SongCache } from '../type/Song'
 import { promptAction } from '@kit.ArkUI'
 import Logger from '../common/Logger'
-import { qualityDescriptions } from '../common/APIHelper'
+import { cover, qualityDescriptions } from '../common/APIHelper'
 import { fileIo as fs } from '@kit.CoreFileKit'
 import { audioFileSaver } from '../common/AudioFileSaver'
 
@@ -223,7 +223,7 @@ export struct Cached {
       ForEach(this.cacheList, (item: CacheList) => {
         ListItem() {
           Row() {
-            Image(item.data.value.coverImgUrl)
+            Image(cover(item.data.value.coverImgUrl, 100))
               .width(56)
               .height(56)
               .borderRadius(8)

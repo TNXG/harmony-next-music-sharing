@@ -1,7 +1,7 @@
 import { AxiosResponse } from "@ohos/axios";
 import { PreferencesUtil } from "../common/PreferenceUtil";
 import request from "../common/RequestUtil";
-import { DailySong, SongDetailResponse, SongUrlResponse } from "../type/Song";
+import { DailySong, LyricResponse, SongDetailResponse, SongUrlResponse } from "../type/Song";
 
 // 获取歌曲详情 API
 export async function getSongDetail(ids: Array<number | string>): Promise<SongDetailResponse> {
@@ -48,4 +48,14 @@ export async function getRecommendSongs(): Promise<RecommendSongsData> {
 
 export async function playlistSubscribe(id: string | number, t: number) {
  await request.post(`/playlist/subscribe?t=${t}&id=${id}`)
+}
+
+/**
+ * 获取歌词的API
+ * @param id 歌曲id
+ * @returns 歌词数据
+ */
+export async function getSongLyric(id: string | number): Promise<LyricResponse> {
+  const response: AxiosResponse = await request.post(`/lyric?id=${id}`);
+  return response.data as LyricResponse;
 }

@@ -13,7 +13,7 @@ export struct PlayList {
   @StorageLink("Track") track: TrackAndPrivilege | null = null;
   @State isLoading: boolean = false;
   @State currentPage: number = 0;
-  private readonly PAGE_SIZE: number = 10;
+  private readonly PAGE_SIZE: number = 50;
   private scroller: Scroller = new Scroller();
 
   aboutToAppear() {

@@ -211,3 +211,26 @@ export interface SongCache {
   coverImgUrl: string // 歌曲封面
   artist: string[] // 艺术家
 }
+
+// 歌词接口返回数据结构
+interface LyricVersion {
+  version: number;
+  lyric: string;
+}
+
+export interface LyricResponse {
+  sgc: boolean;
+  sfy: boolean;
+  qfy: boolean;
+  lrc: LyricVersion;
+  klyric: LyricVersion;
+  tlyric: LyricVersion;
+  romalrc: LyricVersion;
+  code: number;
+}
+
+// 解析后的单条歌词
+export interface LyricLine {
+  time: number; // 时间戳(毫秒)
+  text: string; // 歌词文本
+}

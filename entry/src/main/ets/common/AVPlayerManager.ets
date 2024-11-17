@@ -350,10 +350,27 @@ class AVPlayerManager {
     };
     player.audioRendererInfo = audioRendererInfo;
 
+    player.on('audioOutputDeviceChangeWithInfo', async (info: audio.AudioStreamDeviceChangeInfo) => {
+      switch(info.changeReason) {
+        case audio.AudioStreamDeviceChangeReason.REASON_OLD_DEVICE_UNAVAILABLE:
+          // 设备不可用(如蓝牙断开)，需要暂停播放
+          await this.pause()
+          break;
+
+        case audio.AudioStreamDeviceChangeReason.REASON_NEW_DEVICE_AVAILABLE:
+          // 新设备可用
+          break;
+
+        case audio.AudioStreamDeviceChangeReason.REASON_OVERRODE:
+          // 设备被切换
+          break;
+      }
+    })
+
     // 设置音频打断监听
     player.on('audioInterrupt', async (interruptEvent: audio.InterruptEvent) => {
       this.triggerAudioInterrupt(interruptEvent);
-
+      Logger.info("audioInterrupt", JSON.stringify(interruptEvent))
       if (interruptEvent.forceType === audio.InterruptForceType.INTERRUPT_FORCE) {
         switch (interruptEvent.hintType) {
           case audio.InterruptHint.INTERRUPT_HINT_PAUSE:

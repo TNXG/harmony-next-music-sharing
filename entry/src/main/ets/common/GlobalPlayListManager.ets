@@ -60,7 +60,7 @@ class GlobalPlaylist {
     EventBus.send("PlayListChange", type)
   }
 
-  public  setCurrentIndex(value: number): void {
+  public setCurrentIndex(value: number): void {
     this._currentIndex = value
     this.debouncedEmitCurrentChange(this.getCurrentSong())
   }
@@ -347,6 +347,14 @@ class GlobalPlaylist {
         break
     }
     return this._playMode
+  }
+
+  public getNext() {
+    const index = this.getNextIndex()
+    if (index === -1) {
+      return undefined
+    }
+    return this.playlist[index]
   }
 }
 

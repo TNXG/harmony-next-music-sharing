@@ -1,13 +1,12 @@
 import { BreakPointType } from "../common/BreakpointSystem"
 import { BreakpointConstants, StyleConstants } from "../common/Constant"
 import { TrackAndPrivilege } from '../type/Playlist'
-import { globalPlaylist, PlaylistChangeType, PlayMode } from '../common/GlobalPlayListManager'
+import { globalPlaylist, PlayMode } from '../common/GlobalPlayListManager'
 import { cover } from '../common/APIHelper'
 import { avPlayerManager } from '../common/AVPlayerManager'
 import { EventBus } from '../common/EventBus'
-import { PlayListDataSource } from '../viewmodel/PlayListDataSource'
-
 import { PlayList } from '../component/PlayList'
+import { LyricView } from '../component/LyricDisplay'
 
 @Entry
 @Component
@@ -24,7 +23,6 @@ struct Playing {
   @StorageLink("Track") track: TrackAndPrivilege | null = null
   private updateTimer: number = -1
   private playerManager = avPlayerManager
-  private dataSource: PlayListDataSource = new PlayListDataSource()
   @State appearItems: number[] = []
   @State isLoading: boolean = false
   @State loadAll: boolean = false
@@ -87,7 +85,6 @@ struct Playing {
       clearInterval(this.updateTimer)
       this.updateTimer = -1
     }
-    this.playerManager.clearCallbacks()
   }
 
   formatTime(milliseconds: number): string {
@@ -341,15 +338,7 @@ struct Playing {
             .alignItems(HorizontalAlign.Center)
 
             Column() {
-              List() {
-                ListItem() {
-                  Text("正在努力施工中...")
-                    .fontSize(16)
-                    .margin(8)
-                    .fontColor(Color.White)
-                }
-              }
-              .width('100%')
+              LyricView()
             }
             .width('40%')
             .height('100%')
@@ -395,15 +384,7 @@ struct Playing {
 
             TabContent() {
               Column() {
-                List() {
-                  ListItem() {
-                    Text("正在努力施工中...")
-                      .fontSize(16)
-                      .margin(8)
-                      .fontColor(Color.White)
-                  }
-                }
-                .width('100%')
+                LyricView()
               }
               .width('100%')
               .height('100%')

@@ -1,6 +1,8 @@
 import { BreakpointSystem } from '../common/BreakpointSystem';
 import { BreakpointConstants, StyleConstants, PageConstants, } from '../common/Constant'; // 通用工具
 import { EventBus } from '../common/EventBus';
+import { PlaybackControlBar } from '../component/PlaybackControlBar';
+import { TrackAndPrivilege } from '../type/Playlist';
 import { Cached } from '../view/Cached';
 import { Library } from '../view/Library';
 import { LookUp } from '../view/LookUp';
@@ -12,11 +14,11 @@ import { buttonInfo, ButtonInfoModel } from '../viewmodel/BottomButtonData'; // 
 struct Index {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm';
   @State currentPageIndex: number = 0;
+  @StorageLink("Track") track: TrackAndPrivilege | null = null
   private breakpointSystem = new BreakpointSystem();
   private controller: TabsController = new TabsController()
 
   async aboutToAppear() {
-    // await this.controller.preloadItems([0, 1, 2])
     this.breakpointSystem.register();
   }
 
@@ -54,22 +56,57 @@ struct Index {
         controller: this.controller
       }) {
         TabContent() {
-          LookUp()
+          Column() {
+            // 内容区域使用Scroll包裹，并设置底部边距
+            Scroll() {
+              LookUp()
+            }
+            .width('100%')
+            .layoutWeight(1)
+
+            // 播放控制栏
+            if (this.track) {
+              PlaybackControlBar()
+            }
+          }
+          .width('100%')
+          .height('100%')
         }
         .tabBar(this.BottomNavigation(buttonInfo[0]))
-        .expandSafeArea()
 
         TabContent() {
-          Library()
+          Column() {
+            Scroll() {
+              Library()
+            }
+            .width('100%')
+            .layoutWeight(1)
+
+            if (this.track) {
+              PlaybackControlBar()
+            }
+          }
+          .width('100%')
+          .height('100%')
         }
         .tabBar(this.BottomNavigation(buttonInfo[1]))
-        .expandSafeArea()
 
         TabContent() {
-          Cached()
+          Column() {
+            Scroll() {
+              Cached()
+            }
+            .width('100%')
+            .layoutWeight(1)
+
+            if (this.track) {
+              PlaybackControlBar()
+            }
+          }
+          .width('100%')
+          .height('100%')
         }
         .tabBar(this.BottomNavigation(buttonInfo[2]))
-        .expandSafeArea()
       }
       .barWidth(this.currentBreakpoint === BreakpointConstants.BREAKPOINT_LG ?
       $r('app.float.bar_width') : StyleConstants.FULL_WIDTH)
@@ -78,11 +115,15 @@ struct Index {
       .vertical(this.currentBreakpoint === BreakpointConstants.BREAKPOINT_LG)
       .scrollable(false)
       .clip(false)
+      .layoutWeight(1)
+      .expandSafeArea()
       .onChange(async (index: number) => {
         this.currentPageIndex = index;
         EventBus.send("ViewChange", index == 0 ? "lookup" : index == 1 ? "library" : "cached")
       })
     }
+    .width('100%')
+    .height('100%')
     .backgroundColor($r('app.color.page_background'))
     .expandSafeArea()
   }

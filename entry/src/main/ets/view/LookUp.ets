@@ -10,6 +10,7 @@ import { Artist, Playlist } from '../type/Toplist'
 import { ArtistCircleCard } from '../component/ArtistCircleCard'
 import { Album } from '../type/Album'
 import { promptAction, router } from '@kit.ArkUI'
+import { PlaybackControlBar } from '../component/PlaybackControlBar'
 
 @Component
 export struct LookUp {
