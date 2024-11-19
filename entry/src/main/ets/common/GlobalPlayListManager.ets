@@ -356,6 +356,39 @@ class GlobalPlaylist {
     }
     return this.playlist[index]
   }
+
+  /**
+   * 插入到下一首播放或移动已存在的歌曲到下一首位置
+   * @param song 要插入或移动的歌曲
+   * @returns 返回是否成功插入或移动
+   */
+  public insertOrMoveNext(song: TrackAndPrivilege): boolean {
+    const targetIndex = this.getCurrentIndex() + 1
+    const existingIndex = this.findSongIndexById(song.track.id)
+
+    // 如果歌曲已存在
+    if (existingIndex !== -1) {
+      // 如果歌曲就在目标位置，不需要移动
+      if (existingIndex === targetIndex) {
+        return false
+      }
+
+      // 如果歌曲在目标位置之后，移动到目标位置
+      if (existingIndex > targetIndex) {
+        this.moveSong(existingIndex, targetIndex)
+      }
+      // 如果歌曲在目标位置之前，需要考虑移动后的位置偏移
+      else {
+        this.moveSong(existingIndex, targetIndex - 1)
+      }
+    }
+    // 如果歌曲不存在，直接插入
+    else {
+      this.insertSong(song, targetIndex)
+    }
+
+    return true
+  }
 }
 
 const globalPlaylist = GlobalPlaylist.getInstance()

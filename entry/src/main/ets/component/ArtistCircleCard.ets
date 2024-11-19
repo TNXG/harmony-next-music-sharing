@@ -20,12 +20,13 @@ export struct ArtistCircleCard {
       .aspectRatio(1)
       .clip(true)
       .borderRadius("100%")
-      .backgroundColor('#1f1f1f')
+      .backgroundColor($r('app.color.artist_card_placeholder'))
 
       // 艺人名称
       Text(this.name)
         .fontSize(14)
         .fontWeight(StyleConstants.FONT_WEIGHT_SEVEN)
+        .fontColor($r('app.color.artist_name'))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width(this.sizeCard)

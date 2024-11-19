@@ -1,4 +1,5 @@
 import { StyleConstants } from "../common/Constant"
+import { router } from "@kit.ArkUI"
 
 @Component
 export struct SearchBar {
@@ -11,7 +12,6 @@ export struct SearchBar {
 
   build() {
     Stack({ alignContent: Alignment.Start }) {
-      // 内容层
       Row({ space: 8 }) {
         Search({
           value: this.searchText,
@@ -20,10 +20,17 @@ export struct SearchBar {
         })
           .width(this.barWidth)
           .height(40)
-          .placeholderColor('#999999')
+          .placeholderColor($r('app.color.search_placeholder'))
           .placeholderFont({ size: 16 })
           .textFont({ size: 16 })
+          .fontColor($r('app.color.search_text'))
+          .backgroundColor($r('app.color.search_background'))
           .borderRadius(8)
+          .onClick(() => {
+            router.pushUrl({
+              url: "pages/CloudSearch"
+            })
+          })
           .onChange((value: string) => {
             this.searchText = value
           })

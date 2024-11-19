@@ -47,7 +47,7 @@ export async function getRecommendSongs(): Promise<RecommendSongsData> {
 }
 
 export async function playlistSubscribe(id: string | number, t: number) {
- await request.post(`/playlist/subscribe?t=${t}&id=${id}`)
+  await request.post(`/playlist/subscribe?t=${t}&id=${id}`)
 }
 
 /**
@@ -58,4 +58,9 @@ export async function playlistSubscribe(id: string | number, t: number) {
 export async function getSongLyric(id: string | number): Promise<LyricResponse> {
   const response: AxiosResponse = await request.post(`/lyric?id=${id}`);
   return response.data as LyricResponse;
+}
+
+// 收藏/取消收藏歌曲到歌单
+export async function collectSong(pid: number | string, ids: Array<number | string>, op: "add" | "del" = "add") {
+  await request.post(`/playlist/tracks?op=${op}&pid=${pid}&tracks=${ids.join(",")}`);
 }

@@ -123,7 +123,7 @@ export struct PlayList {
     }
     .width(48)
     .height(48)
-    .backgroundColor('#FF4040')
+    .backgroundColor($r('app.color.delete_button_bg'))
     .margin({ right: 16 })
     .onClick(() => {
       this.handleDelete(track);
@@ -136,10 +136,10 @@ export struct PlayList {
       LoadingProgress()
         .width(24)
         .height(24)
-        .color('#999999')
+        .color($r('app.color.loading_color'))
       Text('加载中...')
         .fontSize(14)
-        .fontColor('#999999')
+        .fontColor($r('app.color.text_tertiary'))
         .margin({ left: 8 })
     }
     .width('100%')
@@ -154,7 +154,7 @@ export struct PlayList {
         Text('当前播放列表')
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#000000')
+          .fontColor($r('app.color.text_primary'))
 
         Blank()
 
@@ -162,12 +162,12 @@ export struct PlayList {
           Image($r('app.media.ic_close'))
             .width(24)
             .height(24)
-            .fillColor('#000000')
+            .fillColor($r('app.color.icon_color'))
         }
         .width(36)
         .height(36)
         .type(ButtonType.Circle)
-        .backgroundColor('rgba(0, 0, 0, 0.05)')
+        .backgroundColor($r('app.color.playlist_close_button_bg'))
         .onClick(() => {
           this.showPlaylist = false;
         })
@@ -175,6 +175,7 @@ export struct PlayList {
       .width('100%')
       .height(56)
       .padding({ left: 16, right: 16 })
+      .backgroundColor($r('app.color.playlist_bg'))
 
       // List
       List({ space: 4, scroller: this.scroller }) {
@@ -227,6 +228,5 @@ export struct PlayList {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(Color.White)
   }
 }

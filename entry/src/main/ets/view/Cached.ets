@@ -44,13 +44,12 @@ export struct Cached {
   @Builder
   SwipeActions(item: CacheList) {
     Row() {
-      // 保存按钮
       Button() {
         Row() {
           Image($r('app.media.ic_download'))
             .width(24)
             .height(24)
-            .fillColor('#666')
+            .fillColor($r('app.color.icon_color'))
         }
       }
       .width(48)
@@ -64,6 +63,7 @@ export struct Cached {
       this.DeleteButton(item)
     }
   }
+
 
   private async saveAudio(item: CacheList) {
     try {
@@ -164,17 +164,18 @@ export struct Cached {
         Text(this.stats.count.toString())
           .fontSize(24)
           .fontWeight(FontWeight.Bold)
+          .fontColor($r('app.color.text_primary'))
           .margin({ bottom: 4 })
         Text('缓存数量')
           .fontSize(14)
-          .fontColor('#666')
+          .fontColor($r('app.color.text_secondary'))
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Center)
     }
     .width('100%')
     .padding(16)
-    .backgroundColor(Color.White)
+    .backgroundColor(Color.Transparent)
     .borderRadius(16)
     .margin({ top: 16, bottom: 16 })
   }
@@ -186,7 +187,7 @@ export struct Cached {
         Image($r('app.media.ic_trash'))
           .width(24)
           .height(24)
-          .fillColor('#666')
+          .fillColor($r('app.color.icon_color'))
       }
     }
     .width(48)
@@ -233,18 +234,19 @@ export struct Cached {
               Text(item.data.value.name)
                 .fontSize(16)
                 .fontWeight(FontWeight.Medium)
+                .fontColor($r('app.color.text_primary'))
                 .margin({ bottom: 4 })
 
               Text(item.data.value.artist.join(' / '))
                 .fontSize(14)
-                .fontColor('#666')
+                .fontColor($r('app.color.text_secondary'))
                 .margin({ bottom: 4 })
                 .maxLines(1)
 
               Row() {
                 Text(`音质: ${Object(qualityDescriptions)[item.data.value.level]}`)
                   .fontSize(12)
-                  .fontColor('#999')
+                  .fontColor($r('app.color.text_tertiary'))
               }
             }
             .alignItems(HorizontalAlign.Start)
@@ -252,7 +254,7 @@ export struct Cached {
           }
           .width('100%')
           .padding(12)
-          .backgroundColor(Color.White)
+          .backgroundColor(Color.Transparent)
           .borderRadius(12)
         }
         .swipeAction({ end: this.SwipeActions(item) })
@@ -264,6 +266,7 @@ export struct Cached {
     }
     .width('100%')
     .layoutWeight(1)
+    .scrollBar(BarState.Off)
     .listDirection(Axis.Vertical)
   }
 
@@ -273,7 +276,7 @@ export struct Cached {
       Row() {
         Text('本地缓存')
           .fontSize(24)
-          .fontWeight(FontWeight.Bold)
+          .fontColor($r('app.color.text_primary'))
 
         Blank()
 
@@ -283,11 +286,11 @@ export struct Cached {
               Image($r('app.media.ic_trash'))
                 .width(20)
                 .height(20)
-                .fillColor('#666')
+                .fillColor($r('app.color.icon_color'))
                 .margin({ right: 4 })
               Text('清空缓存')
                 .fontSize(14)
-                .fontColor('#666')
+                .fontColor($r('app.color.text_secondary'))
             }
             .padding(12)
           }
@@ -319,10 +322,10 @@ export struct Cached {
           LoadingProgress()
             .width(32)
             .height(32)
-            .color('#666')
+            .color($r('app.color.loading_color'))
           Text('加载中...')
             .fontSize(14)
-            .fontColor('#666')
+            .fontColor($r('app.color.text_secondary'))
             .margin({ top: 8 })
         }
         .width('100%')
@@ -334,10 +337,10 @@ export struct Cached {
             .width(80)
             .height(80)
             .margin({ bottom: 16 })
-            .fillColor('#999')
+            .fillColor($r('app.color.empty_icon_color'))
           Text('暂无缓存数据')
             .fontSize(16)
-            .fontColor('#666')
+            .fontColor($r('app.color.text_secondary'))
         }
         .width('100%')
         .layoutWeight(1)
@@ -349,6 +352,7 @@ export struct Cached {
     }
     .width(StyleConstants.FULL_WIDTH)
     .height(StyleConstants.FULL_HEIGHT)
+    .backgroundColor($r('app.color.page_background'))
     .expandSafeArea()
     .padding({ bottom: 16 })
   }

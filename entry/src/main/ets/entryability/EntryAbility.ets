@@ -142,6 +142,9 @@ async function startPlaySong(track: TrackAndPrivilege) {
     const cache = cacheManager.get(`${track.track.id}_${confirmLevel}`)
     const autoCache = PreferencesUtil.get<boolean>("autoCache") ?? false;
 
+    AppStorage.setOrCreate("Lyrics", null)
+    EventBus.send("LyricsUpdated")
+
     if (cache) {
       avPlayerManager.playByPath(cache.path)
       avPlayerManager.clearListener('onDurationChange')
@@ -199,6 +202,7 @@ async function startPlaySong(track: TrackAndPrivilege) {
             cacheNextSong()
           }
         })
+        await backgroundRunningManager.stopBackgroundRunning();
         await backgroundRunningManager.startBackgroundRunning();
         cacheManager.set(`${track.track.id}_${confirmLevel}`, {
           id: track.track.id,
@@ -223,7 +227,7 @@ async function startPlaySong(track: TrackAndPrivilege) {
         isFavorite: isLike
       })
     }
-    AppStorage.setOrCreate("TrackLike", track)
+    AppStorage.setOrCreate("TrackLike", isLike)
 
   } catch (e) {
     promptAction.showToast({

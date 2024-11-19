@@ -1,6 +1,8 @@
 import { avPlayerManager } from "../common/AVPlayerManager"
 import { LyricLine, LyricResponse } from '../type/Song'
 import { EventBus } from '../common/EventBus'
+import { BreakPointType } from "../common/BreakpointSystem"
+import { PreferencesUtil } from "../common/PreferenceUtil";
 
 interface Lyric {
   time: number;
@@ -11,23 +13,36 @@ interface Lyric {
 interface HighlightStyle {
   fontSize: number;
   fontWeight: FontWeight;
-  fontColor: string | Color;
+  fontColor: ResourceStr;
   background: string;
 }
 
 @Component
 export struct LyricView {
+  @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
   @StorageLink('Lyrics') lyrics: LyricResponse | null = null
   @State private parsedLyrics: Array<Lyric> = []
   @State private currentTime: number = 0
   @State private isUserScrolling: boolean = false
   @State private currentIndex: number = -1
-  @State private highlightProgress: number = 0  // 0到1之间的值，用于动画过渡
+  @State private highlightProgress: number = 0
+  @State private fontSize: number = PreferencesUtil.get("lyricSize") ?? 1
   private scroller: Scroller = new Scroller()
   private userScrollTimer: number = -1
   private updateTimer: number = -1
   private playerManager = avPlayerManager
-  private readonly ANIMATION_DURATION: number = 300  // 动画持续时间（毫秒）
+  private readonly ANIMATION_DURATION: number = 300
+  // 基础字号配置
+  private baseFontSize = new BreakPointType({
+    sm: 18,
+    md: 20,
+    lg: 22
+  })
+  private baseFontSizeTranslation = new BreakPointType({
+    sm: 16,
+    md: 18,
+    lg: 20
+  })
 
   private parseLyric(lrc: string): Array<LyricLine> {
     const lyrics: Array<LyricLine> = []
@@ -130,53 +145,87 @@ export struct LyricView {
   }
 
   // 计算高亮样式
-  private getHighlightStyle(index: number) {
+  private getHighlightStyle(index: number): HighlightStyle {
     const isCurrentLine = index === this.currentIndex
     const progress = isCurrentLine ? this.highlightProgress : 0
+    const baseFontSize = this.baseFontSize.getValue(this.currentBreakpoint)
+    const adjustedFontSize = baseFontSize * this.fontSize
 
-    return ({ fontSize: 20 + (4 * progress),
-    fontWeight: isCurrentLine ? FontWeight.Bold : FontWeight.Normal,
-    fontColor: isCurrentLine ? Color.White : 'rgba(255, 255, 255, 0.5)',
-    background: isCurrentLine ? `rgba(255, 255, 255, )` : 'transparent' } as HighlightStyle)
+    return {
+      fontSize: adjustedFontSize + (4 * progress * this.fontSize),
+      fontWeight: isCurrentLine ? FontWeight.Bold : FontWeight.Normal,
+      fontColor: isCurrentLine ? Color.White : 'rgba(255, 255, 255, 0.5)',
+      background: isCurrentLine ? `rgba(255, 255, 255, )` : 'transparent'
+    } as HighlightStyle
+  }
+
+  @Builder
+  FontSizeControls() {
+    Row() {
+      Button({ type: ButtonType.Circle, stateEffect: true }) {
+        Image($r('app.media.ic_font_decrease'))
+          .width(24)
+          .height(24)
+          .fillColor("rgba(255, 255, 255, 0.5)")
+      }
+      .width(36)
+      .height(36)
+      .backgroundColor(Color.Transparent)
+      .enabled(this.fontSize > 0.6)
+      .onClick(() => {
+        this.fontSize = Math.max(0.8, this.fontSize - 0.2)
+        PreferencesUtil.put("lyricSize", this.fontSize)
+      })
+
+      Text()
+        .width(1)
+        .height(24)
+        .backgroundColor($r('app.color.border_color'))
+        .margin({ left: 6, right: 6 })
+        .opacity(0.6)
+
+      Button({ type: ButtonType.Circle, stateEffect: true }) {
+        Image($r('app.media.ic_font_increase'))
+          .width(24)
+          .height(24)
+          .fillColor("rgba(255, 255, 255, 0.5)")
+      }
+      .width(36)
+      .height(36)
+      .backgroundColor(Color.Transparent)
+      .enabled(this.fontSize < 5)
+      .onClick(() => {
+        this.fontSize = Math.min(5, this.fontSize + 0.2)
+        PreferencesUtil.put("lyricSize", this.fontSize)
+      })
+    }
+    .height(48)
+    .width('100%')
+    .justifyContent(FlexAlign.End)
+    .backgroundColor(Color.Transparent)
+    .borderRadius({ topLeft: 12, topRight: 12 })
   }
 
   build() {
-    Column() {
-      if (this.parsedLyrics.length === 0) {
-        Text('暂无歌词')
-          .fontSize(20)
-          .fontColor('rgba(255, 255, 255, 0.6)')
-          .margin(16)
-      } else {
-        List({ scroller: this.scroller }) {
-          ListItem().height(160)
+    Stack() {
+      Column() {
+        if (this.parsedLyrics.length === 0) {
+          Text('暂无歌词')
+            .fontSize(this.baseFontSize.getValue(this.currentBreakpoint) * this.fontSize)
+            .fontColor($r('app.color.text_secondary'))
+            .margin(16)
+        } else {
+          List({ scroller: this.scroller }) {
+            ListItem().height(160)
 
-          ForEach(this.parsedLyrics, (item: Lyric, index) => {
-            ListItem() {
-              Column() {
-                Text(item.text)
-                  .fontSize(this.getHighlightStyle(index).fontSize)
-                  .fontWeight(this.getHighlightStyle(index).fontWeight)
-                  .fontColor(this.getHighlightStyle(index).fontColor)
-                  .margin({ top: 8, bottom: item.translation ? 4 : 8 })
-                  .textAlign(TextAlign.Start)
-                  .alignSelf(ItemAlign.Start)
-                  .animation({
-                    duration: 300,
-                    curve: Curve.EaseInOut
-                  })
-                  .onClick(() => {
-                    this.playerManager.getAVPlayerInstance().then(player => {
-                      player.seek(item.time)
-                    })
-                  })
-
-                if (item.translation) {
-                  Text(item.translation)
-                    .fontSize(index === this.currentIndex ? 24 : 18)
+            ForEach(this.parsedLyrics, (item: Lyric, index) => {
+              ListItem() {
+                Column() {
+                  Text(item.text)
+                    .fontSize(this.getHighlightStyle(index).fontSize)
                     .fontWeight(this.getHighlightStyle(index).fontWeight)
                     .fontColor(this.getHighlightStyle(index).fontColor)
-                    .margin({ bottom: 8 })
+                    .margin({ top: 8, bottom: item.translation ? 4 : 8 })
                     .textAlign(TextAlign.Start)
                     .alignSelf(ItemAlign.Start)
                     .animation({
@@ -188,35 +237,62 @@ export struct LyricView {
                         player.seek(item.time)
                       })
                     })
-                }
-              }
-              .width('100%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({ left: 32, right: 32 })
-              .backgroundColor(this.getHighlightStyle(index).background)
-              .borderRadius(8)
-              .animation({
-                duration: 300,
-                curve: Curve.EaseInOut
-              })
-            }
-          })
 
-          ListItem().height(160)
-        }
-        .width('100%')
-        .layoutWeight(1)
-        .scrollBar(BarState.Off)
-        .onWillScroll(() => {
-          this.isUserScrolling = true
-          if (this.userScrollTimer !== -1) {
-            clearTimeout(this.userScrollTimer)
+                  if (item.translation) {
+                    Text(item.translation)
+                      .fontSize(this.baseFontSizeTranslation.getValue(this.currentBreakpoint) * this.fontSize)
+                      .fontWeight(this.getHighlightStyle(index).fontWeight)
+                      .fontColor(this.getHighlightStyle(index).fontColor)
+                      .margin({ bottom: 8 })
+                      .textAlign(TextAlign.Start)
+                      .alignSelf(ItemAlign.Start)
+                      .animation({
+                        duration: 300,
+                        curve: Curve.EaseInOut
+                      })
+                      .onClick(() => {
+                        this.playerManager.getAVPlayerInstance().then(player => {
+                          player.seek(item.time)
+                        })
+                      })
+                  }
+                }
+                .width('100%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 32, right: 32 })
+                .backgroundColor(this.getHighlightStyle(index).background)
+                .borderRadius(8)
+                .animation({
+                  duration: 300,
+                  curve: Curve.EaseInOut
+                })
+              }
+            })
           }
-          this.userScrollTimer = setTimeout(() => {
-            this.isUserScrolling = false
-          }, 3000)
-        })
+          .width('100%')
+          .layoutWeight(1)
+          .scrollBar(BarState.Off)
+          .onWillScroll((scrollOffset: number, scrollState: ScrollState) => {
+            this.isUserScrolling = true
+            if (this.userScrollTimer !== -1) {
+              clearTimeout(this.userScrollTimer)
+            }
+            this.userScrollTimer = setTimeout(() => {
+              this.isUserScrolling = false
+            }, 3000)
+          })
+        }
       }
+      .width('100%')
+      .height('100%')
+
+      // 固定在底部的字号控制栏
+      Column() {
+        this.FontSizeControls()
+      }
+      .position({ x: 0, y: '100%' })
+      .translate({ y: -16 })  // 控制栏高度
+      .width('100%')
     }
     .width('100%')
     .height('100%')

@@ -45,6 +45,31 @@ struct Daily {
   }
 
   @Builder
+  MoreActions(track: DailySong) {
+    Button({ type: ButtonType.Circle }) {
+      Image($r('app.media.ic_more'))
+        .width(24)
+        .height(24)
+        .fillColor($r('app.color.icon_color'))
+    }
+    .width(36)
+    .height(36)
+    .backgroundColor(Color.Transparent)
+    .bindMenu([
+      {
+        value: '添加到下一首',
+        action: () => {
+          const trackAndPrivilege: TrackAndPrivilege = {
+            track: track as ESObject as Track,
+            privilege: track.privilege as ESObject as Privilege
+          }
+          globalPlaylist.insertOrMoveNext(trackAndPrivilege)
+        }
+      },
+    ])
+  }
+
+  @Builder
   SkeletonLoading() {
     Column() {
       Row() {
@@ -52,19 +77,19 @@ struct Daily {
           .width(120)
           .height(120)
           .borderRadius(12)
-          .backgroundColor('#f5f5f5')
+          .backgroundColor($r('app.color.skeleton_background'))
           .margin({ right: 16 })
 
         Column() {
           Row()
             .width('60%')
             .height(24)
-            .backgroundColor('#f5f5f5')
+            .backgroundColor($r('app.color.skeleton_background'))
             .margin({ bottom: 8 })
           Row()
             .width('40%')
             .height(16)
-            .backgroundColor('#f5f5f5')
+            .backgroundColor($r('app.color.skeleton_background'))
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
@@ -77,11 +102,16 @@ struct Daily {
           Row()
             .width(100)
             .height(40)
-            .backgroundColor('#f5f5f5')
+            .backgroundColor($r('app.color.skeleton_background'))
+            .borderRadius(20)
+          Row()
+            .width(100)
+            .height(40)
+            .backgroundColor($r('app.color.skeleton_background'))
             .borderRadius(20)
         }
         .width('100%')
-        .justifyContent(FlexAlign.Center)
+        .justifyContent(FlexAlign.SpaceBetween)
         .padding({ left: 16, right: 16, top: 12 })
 
         ForEach([1, 2, 3, 4, 5], () => {
@@ -89,19 +119,19 @@ struct Daily {
             Row()
               .width(40)
               .height(40)
-              .backgroundColor('#f5f5f5')
+              .backgroundColor($r('app.color.skeleton_background'))
               .borderRadius(4)
               .margin({ right: 12 })
             Column() {
               Row()
                 .width('80%')
                 .height(16)
-                .backgroundColor('#f5f5f5')
+                .backgroundColor($r('app.color.skeleton_background'))
                 .margin({ bottom: 8 })
               Row()
                 .width('50%')
                 .height(14)
-                .backgroundColor('#f5f5f5')
+                .backgroundColor($r('app.color.skeleton_background'))
             }
             .alignItems(HorizontalAlign.Start)
             .layoutWeight(1)
@@ -111,7 +141,7 @@ struct Daily {
         })
       }
       .width('100%')
-      .backgroundColor(Color.White)
+      .backgroundColor($r('app.color.page_background'))
       .borderRadius({ topLeft: 32, topRight: 32 })
     }
     .width('100%')
@@ -130,10 +160,10 @@ struct Daily {
           Image($r('app.media.ic_play'))
             .width(20)
             .height(20)
-            .fillColor('#666')
+            .fillColor($r('app.color.icon_color'))
             .margin({ right: 8 })
           Text('播放全部')
-            .fontColor('#666')
+            .fontColor($r('app.color.text_secondary'))
             .fontSize(16)
         }
         .padding({ left: 16, right: 16 })
@@ -178,6 +208,9 @@ struct Daily {
         tns: track.tns,
         disabled: !track.privilege || track.privilege.st < 0,
         active: (!!this.track && this.track.track.id == track.id) ?? false,
+        rightSlot:() => {
+          this.MoreActions(track)
+        }
       })
         .transition({
           type: TransitionType.Insert,
@@ -232,7 +265,7 @@ struct Daily {
         .height(260)
         .blur(20)
         .opacity(0.6)
-        .backgroundColor('#f5f5f5')
+        .backgroundColor($r('app.color.skeleton_background'))
         .position({ x: 0, y: 0 })
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
@@ -248,7 +281,7 @@ struct Daily {
                 .margin({ bottom: 4 })
               Text(String(this.getCurrentDate().month) + '月')
                 .fontSize(14)
-                .fontColor('#666')
+                .fontColor($r('app.color.text_tertiary'))
             }
             .width(120)
             .height(120)
@@ -259,7 +292,7 @@ struct Daily {
             .justifyContent(FlexAlign.Center)
             .shadow({
               radius: 12,
-              color: '#00000020',
+              color: $r('app.color.shadow_color'),
               offsetX: 0,
               offsetY: 2
             })
@@ -291,13 +324,6 @@ struct Daily {
           .padding(16)
 
           Column() {
-            if (this.profile === null) {
-              Text('登录后查看更多')
-                .fontSize(14)
-                .fontColor('#999')
-                .margin({ bottom: 12 })
-            }
-
             this.ActionBar()
 
             List({ space: 16 }) {
@@ -325,11 +351,11 @@ struct Daily {
           }
           .width(StyleConstants.FULL_WIDTH)
           .layoutWeight(1)
-          .backgroundColor(Color.White)
+          .backgroundColor($r('app.color.page_background'))
           .borderRadius({ topLeft: 32, topRight: 32 })
           .shadow({
             radius: 24,
-            color: '#00000010',
+            color: $r('app.color.shadow_light'),
             offsetX: 0,
             offsetY: -2
           })
@@ -346,6 +372,7 @@ struct Daily {
     }
     .width(StyleConstants.FULL_WIDTH)
     .height(StyleConstants.FULL_HEIGHT)
-    .backgroundColor(Color.White)
+    .backgroundColor($r('app.color.page_background'))
+    .expandSafeArea()
   }
 }

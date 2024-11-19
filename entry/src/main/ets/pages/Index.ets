@@ -33,10 +33,16 @@ struct Index {
         .objectFit(ImageFit.Contain)
         .width($r('app.float.main_image_size'))
         .height($r('app.float.main_image_size'))
+        .fillColor(this.currentPageIndex === button.index ?
+        $r('app.color.tab_icon_active') :
+        $r('app.color.tab_icon_inactive'))
       Text(button.title)
-        .fontColor(this.currentPageIndex === button.index ? $r('app.color.focus_color') :
-        $r('app.color.un_focus_color'))
-        .opacity(this.currentPageIndex === button.index ? StyleConstants.FULL_OPACITY : StyleConstants.SIXTY_OPACITY)
+        .fontColor(this.currentPageIndex === button.index ?
+        $r('app.color.tab_text_active') :
+        $r('app.color.tab_text_inactive'))
+        .opacity(this.currentPageIndex === button.index ?
+        StyleConstants.FULL_OPACITY :
+        StyleConstants.SIXTY_OPACITY)
         .fontWeight(StyleConstants.FONT_WEIGHT_FIVE)
         .textAlign(TextAlign.Center)
         .fontSize($r('app.float.micro_font_size'))
@@ -57,14 +63,12 @@ struct Index {
       }) {
         TabContent() {
           Column() {
-            // 内容区域使用Scroll包裹，并设置底部边距
             Scroll() {
               LookUp()
             }
             .width('100%')
             .layoutWeight(1)
 
-            // 播放控制栏
             if (this.track) {
               PlaybackControlBar()
             }

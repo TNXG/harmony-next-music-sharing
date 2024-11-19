@@ -18,9 +18,9 @@ struct UrlInputDialog {
     this.value = this.defaultValue
   }
 
-  // URL验证正则
+  // URL验证正则，允许http和https以及带端口号的URL
   private validateUrl(url: string): boolean {
-    const urlPattern = /^(https?:\/\/)([\w-]+\.)+[\w-]+(\/[\w-./?%&=]*)?$/
+    const urlPattern = /^(http|https):\/\/[a-zA-Z0-9-.]+(:\d+)?(\/[a-zA-Z0-9-._?&=]*)?$/
     return urlPattern.test(url)
   }
 
@@ -31,6 +31,7 @@ struct UrlInputDialog {
         .fontWeight(FontWeight.Medium)
         .margin({ bottom: 16, top: 8 })
         .width('100%')
+        .fontColor($r('app.color.text_primary'))
 
       TextInput({
         text: this.value,
@@ -51,7 +52,7 @@ struct UrlInputDialog {
             this.cancel()
           })
           .backgroundColor(Color.Transparent)
-          .fontColor('#666')
+          .fontColor($r('app.color.text_secondary'))
           .width(100)
 
         Button('确定', { type: ButtonType.Capsule })
@@ -70,7 +71,7 @@ struct UrlInputDialog {
           .width(100)
       }
     }
-    .backgroundColor(Color.White)
+    .backgroundColor($r('app.color.dialog_background'))
     .width('100%')
     .expandSafeArea()
     .padding(24)
@@ -98,7 +99,7 @@ struct Settings {
     alignment: DialogAlignment.Bottom,
     offset: { dx: 0, dy: -20 },
     customStyle: true,
-    maskColor: '#00000080'
+    maskColor: $r('app.color.dialog_mask')
   })
 
   @Builder
@@ -110,6 +111,7 @@ struct Settings {
             Text('自动缓存下一首')
               .fontSize(16)
               .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_primary'))
 
             Toggle({ type: ToggleType.Switch, isOn: this.autoCache })
               .onChange((isOn: boolean) => {
@@ -126,7 +128,7 @@ struct Settings {
 
           Text('注意流量，可以提升播放体验')
             .fontSize(14)
-            .fontColor('#666666')
+            .fontColor($r('app.color.text_secondary'))
             .margin({ top: 4 })
         }
         .alignItems(HorizontalAlign.Start)
@@ -134,11 +136,11 @@ struct Settings {
       }
       .width('100%')
       .padding(16)
-      .backgroundColor(Color.White)
+      .backgroundColor($r('app.color.card_background_two'))
       .borderRadius(12)
       .shadow({
         radius: 12,
-        color: '#00000008',
+        color: $r('app.color.card_shadow'),
         offsetX: 0,
         offsetY: 2
       })
@@ -167,18 +169,19 @@ struct Settings {
           Text('API 服务器')
             .fontSize(16)
             .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.text_primary'))
 
           if (this.customApiUrl) {
             Text('当前: ' + this.customApiUrl)
               .fontSize(14)
-              .fontColor('#666')
+              .fontColor($r('app.color.text_secondary'))
               .margin({ top: 4 })
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           } else {
             Text('使用默认服务器')
               .fontSize(14)
-              .fontColor('#666')
+              .fontColor($r('app.color.text_secondary'))
               .margin({ top: 4 })
           }
         }
@@ -190,11 +193,11 @@ struct Settings {
             Image($r('app.media.ic_close'))
               .width(20)
               .height(20)
-              .fillColor('#666')
+              .fillColor($r('app.color.icon_color'))
           }
           .width(32)
           .height(32)
-          .backgroundColor('rgba(0,0,0,0.05)')
+          .backgroundColor($r('app.color.button_ghost_background'))
           .margin({ right: 8 })
           .onClick(() => {
             PreferencesUtil.delete('customURL')
@@ -208,22 +211,22 @@ struct Settings {
           Image($r('app.media.ic_edit'))
             .width(20)
             .height(20)
-            .fillColor('#666')
+            .fillColor($r('app.color.icon_color'))
         }
         .width(32)
         .height(32)
-        .backgroundColor('rgba(0,0,0,0.05)')
+        .backgroundColor($r('app.color.button_ghost_background'))
         .onClick(() => {
           this.dialogController.open()
         })
       }
       .width('100%')
       .padding(16)
-      .backgroundColor(Color.White)
+      .backgroundColor($r('app.color.card_background_two'))
       .borderRadius(12)
       .shadow({
         radius: 12,
-        color: '#00000008',
+        color: $r('app.color.card_shadow'),
         offsetX: 0,
         offsetY: 2
       })
@@ -238,6 +241,7 @@ struct Settings {
         .fontWeight(FontWeight.Medium)
         .margin({ bottom: 12 })
         .width('100%')
+        .fontColor($r('app.color.text_primary'))
 
       List() {
         ForEach(Object.keys(qualityDescriptions), (key: string) => {
@@ -255,6 +259,7 @@ struct Settings {
               Text(Object(qualityDescriptions)[key])
                 .fontSize(14)
                 .margin({ left: 8 })
+                .fontColor($r('app.color.text_primary'))
             }
             .width('100%')
             .height(48)
@@ -270,11 +275,11 @@ struct Settings {
     }
     .width('100%')
     .padding(16)
-    .backgroundColor(Color.White)
+    .backgroundColor($r('app.color.card_background_two'))
     .borderRadius(12)
     .shadow({
       radius: 12,
-      color: '#00000008',
+      color: $r('app.color.card_shadow'),
       offsetX: 0,
       offsetY: 2
     })
@@ -286,6 +291,7 @@ struct Settings {
         Text('设置')
           .fontSize(24)
           .fontWeight(FontWeight.Bold)
+          .fontColor($r('app.color.text_primary'))
       }
       .width('100%')
       .padding({
@@ -310,7 +316,7 @@ struct Settings {
     }
     .width(StyleConstants.FULL_WIDTH)
     .height(StyleConstants.FULL_HEIGHT)
-    .backgroundColor('#f5f5f5')
+    .backgroundColor($r('app.color.page_background'))
     .expandSafeArea()
   }
 }

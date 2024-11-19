@@ -138,8 +138,10 @@ export struct Login {
 
   async extractCookie() {
     try {
-      const cookie = webview.WebCookieManager.fetchCookieSync('https://music.163.com')
+      let cookie = webview.WebCookieManager.fetchCookieSync('https://music.163.com')
       if (cookie) {
+        // 给网页版加上OS=PC标识
+        cookie = cookie + '; OS=pc'
         this.getLoginStatus(cookie)
         this.showWebLogin = false
       } else {
@@ -201,16 +203,16 @@ export struct Login {
           Text('扫码登录网易云账号')
             .fontSize(24)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#4E6EF2')
+            .fontColor($r('app.color.primary_blue'))
             .margin({ bottom: 8 })
 
           Text('使用登录凭证获取完整视听体验')
             .fontSize(16)
-            .fontColor('#86909C')
+            .fontColor($r('app.color.text_placeholder'))
 
           Text('您只有拥有会员资格才可以浏览会员相关资源')
             .fontSize(12)
-            .fontColor('#86909C')
+            .fontColor($r('app.color.text_placeholder'))
             .margin({ top: 8 })
             .fontWeight(StyleConstants.FONT_WEIGHT_SEVEN)
         }
@@ -223,14 +225,14 @@ export struct Login {
         })
       }
       .width('90%')
-      .backgroundColor('#F5F7FA')
+      .backgroundColor($r('app.color.background_gray'))
       .borderRadius(16)
       .margin({ bottom: 12 })
       .bindSheet($$this.showLogin, this.Login(), {
         showClose: false,
         detents: [SheetSize.MEDIUM, SheetSize.LARGE],
         dragBar: true,
-        backgroundColor: Color.White,
+        backgroundColor: $r('app.color.dialog_background'),
         onDisappear: () => {
           if (this.checkStatusTimer !== -1) {
             clearTimeout(this.checkStatusTimer)
@@ -244,16 +246,16 @@ export struct Login {
           Text('网页登录网易云账号')
             .fontSize(24)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#4E6EF2')
+            .fontColor($r('app.color.primary_blue'))
             .margin({ bottom: 8 })
 
           Text('使用网易云音乐官网登录')
             .fontSize(16)
-            .fontColor('#86909C')
+            .fontColor($r('app.color.text_placeholder'))
 
           Text('可使用手机号、邮箱或其他方式登录')
             .fontSize(12)
-            .fontColor('#86909C')
+            .fontColor($r('app.color.text_placeholder'))
             .margin({ top: 8 })
             .fontWeight(StyleConstants.FONT_WEIGHT_SEVEN)
         }
@@ -265,14 +267,14 @@ export struct Login {
         })
       }
       .width('90%')
-      .backgroundColor('#F5F7FA')
+      .backgroundColor($r('app.color.background_gray'))
       .borderRadius(16)
       .margin({ bottom: 12 })
       .bindSheet($$this.showWebLogin, this.WebLogin(), {
         showClose: false,
         detents: [SheetSize.LARGE],
         dragBar: true,
-        backgroundColor: Color.White
+        backgroundColor: $r('app.color.dialog_background')
       })
 
       // 搜索卡片
@@ -281,19 +283,19 @@ export struct Login {
           Text('搜索您的网易云账号')
             .fontSize(24)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#4E6EF2')
+            .fontColor($r('app.color.primary_blue'))
             .margin({ bottom: 8 })
 
           Text('只能获取账号公开数据')
             .fontSize(16)
-            .fontColor('#86909C')
+            .fontColor($r('app.color.text_placeholder'))
         }
         .alignItems(HorizontalAlign.Start)
         .width('100%')
         .padding(20)
       }
       .width('90%')
-      .backgroundColor('#F5F7FA')
+      .backgroundColor($r('app.color.background_gray'))
       .borderRadius(16)
       .margin({ bottom: 32 })
       .onClick(() => {
@@ -302,7 +304,7 @@ export struct Login {
 
       Text('使用自己的 API 服务器')
         .fontSize(14)
-        .fontColor('#86909C')
+        .fontColor($r('app.color.text_placeholder'))
         .margin({ bottom: 20 })
         .onClick(() => {
           router.pushUrl({
@@ -312,12 +314,14 @@ export struct Login {
     }
   }
 
+
   @Builder
   Login() {
     Column() {
       Text('扫码登录')
         .fontSize(20)
         .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.text_primary'))
         .alignSelf(ItemAlign.Start)
         .margin({ left: 20, top: 20, bottom: 40 })
 
@@ -327,16 +331,17 @@ export struct Login {
             .width(200)
             .height(200)
             .borderRadius(8)
-            .borderColor('#E5E5E5')
+            .borderColor($r('app.color.border_color'))
         } else {
           Column() {
             LoadingProgress()
               .width(32)
               .height(32)
+              .color($r('app.color.loading_color'))
               .margin({ bottom: 8 })
             Text('获取二维码中...')
               .fontSize(14)
-              .fontColor('#999999')
+              .fontColor($r('app.color.text_tertiary'))
           }
           .width('100%')
           .height('100%')
@@ -351,14 +356,14 @@ export struct Login {
             Button('点击刷新')
               .onClick(() => this.createQRCode())
               .margin({ top: 8 })
-              .backgroundColor('#4080FF')
+              .backgroundColor($r('app.color.secondary_blue'))
               .width(120)
               .height(40)
               .borderRadius(20)
           }
           .width('100%')
           .height('100%')
-          .backgroundColor('rgba(0, 0, 0, 0.7)')
+          .backgroundColor($r('app.color.expired_mask'))
           .borderRadius(8)
           .justifyContent(FlexAlign.Center)
         }
@@ -374,19 +379,18 @@ export struct Login {
           .width(120)
           .height(40)
           .borderRadius(20)
-          .backgroundColor(this.isCreatingQR ? '#182431' : '#4080FF')
+          .backgroundColor(this.isCreatingQR ? $r('app.color.disabled_button') : $r('app.color.secondary_blue'))
       }
 
       Text('使用网易云音乐 App 扫码登录')
         .fontSize(14)
-        .fontColor('#999999')
+        .fontColor($r('app.color.text_tertiary'))
         .margin({ top: 20 })
     }
     .width('100%')
     .padding({ top: 12, bottom: 20 })
     .height('100%')
     .alignItems(HorizontalAlign.Center)
-
   }
 
   @Builder
@@ -396,12 +400,13 @@ export struct Login {
         Text('网页登录')
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
+          .fontColor($r('app.color.text_primary'))
         Blank()
         Button('获取登录信息')
           .onClick(() => {
             this.extractCookie()
           })
-          .backgroundColor('#4080FF')
+          .backgroundColor($r('app.color.secondary_blue'))
           .borderRadius(20)
       }
       .width('100%')
@@ -425,7 +430,7 @@ export struct Login {
 
       Text('请在网页中完成登录后点击"获取登录信息"按钮')
         .fontSize(14)
-        .fontColor('#999999')
+        .fontColor($r('app.color.text_tertiary'))
         .margin({ top: 12 })
     }
     .width('100%')

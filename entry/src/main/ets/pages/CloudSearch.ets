@@ -1,0 +1,264 @@
+import { router } from '@kit.ArkUI'
+import { SongListCard } from '../component/SongListCard'
+import { SongDetail } from '../type/Song'
+import { cloudSearch as search } from "../api/Search"
+import { globalPlaylist } from '../common/GlobalPlayListManager'
+import { TrackAndPrivilege, Track, Privilege } from '../type/Playlist'
+import { Artist } from '../type/Toplist'
+import { cover } from '../common/APIHelper'
+
+enum SearchType {
+  SINGLE = 1,
+  ALBUM = 10,
+  ARTIST = 100,
+  PLAYLIST = 1000
+}
+
+interface TabItem {
+  name: string
+  type: SearchType
+}
+
+@Entry
+@Component
+struct CloudSearch {
+  @State searchText: string = ''
+  @State searchResults: SongDetail[] = []
+  @State isLoading: boolean = false
+  @State showResults: boolean = false
+  @State currentTab: number = 0
+  private searchController: SearchController = new SearchController()
+  @StorageLink("Track") track: TrackAndPrivilege | null = null
+  private tabs: TabItem[] = [
+    { name: '单曲', type: SearchType.SINGLE },
+    // { name: '专辑', type: SearchType.ALBUM },
+    // { name: '歌手', type: SearchType.ARTIST },
+    // { name: '歌单', type: SearchType.PLAYLIST }
+  ]
+
+  @Builder
+  MoreActions(track: SongDetail) {
+    Button({ type: ButtonType.Circle }) {
+      Image($r('app.media.ic_more'))
+        .width(24)
+        .height(24)
+        .fillColor($r('app.color.icon_color'))
+    }
+    .width(36)
+    .height(36)
+    .backgroundColor(Color.Transparent)
+    .bindMenu([
+      {
+        value: '添加到下一首',
+        action: () => {
+          const trackAndPrivilege: TrackAndPrivilege = {
+            track: track as ESObject as Track,
+            privilege: track.privilege as ESObject as Privilege
+          }
+          globalPlaylist.insertOrMoveNext(trackAndPrivilege)
+        }
+      },
+    ])
+  }
+
+  aboutToAppear() {
+    this.searchResults = []
+    this.showResults = false
+  }
+
+  async handleSearch() {
+    if (!this.searchText.trim()) {
+      this.searchResults = []
+      this.showResults = false
+      return
+    }
+
+    this.isLoading = true
+    this.showResults = false
+
+    try {
+      const result = await search({
+        keywords: this.searchText,
+        limit: 30,
+        offset: 0,
+        type: this.tabs[this.currentTab].type
+      })
+
+      if (result?.result?.songs) {
+        animateTo({
+          duration: 300,
+          curve: Curve.EaseOut
+        }, () => {
+          this.searchResults = result.result.songs
+          this.showResults = true
+        })
+      } else {
+        this.searchResults = []
+        this.showResults = true
+      }
+    } catch (error) {
+      this.searchResults = []
+      this.showResults = true
+    } finally {
+      this.isLoading = false
+    }
+  }
+
+  @Builder
+  SearchHeader() {
+    Column() {
+      Row() {
+        Search({
+          value: this.searchText,
+          placeholder: '搜索音乐、歌手、专辑、歌单',
+          controller: this.searchController
+        })
+          .width('100%')
+          .height(40)
+          .backgroundColor($r('app.color.search_background'))
+          .placeholderColor($r('app.color.search_placeholder'))
+          .fontColor($r('app.color.search_text'))
+          .placeholderFont({ size: 16 })
+          .textFont({ size: 16 })
+          .borderRadius(20)
+          .onChange((value: string) => {
+            this.searchText = value
+          })
+          .onSubmit(() => {
+            this.handleSearch()
+          })
+      }
+      .width('100%')
+      .padding({
+        left: 16,
+        right: 16,
+        top: 8,
+        bottom: 8
+      })
+    }
+    .width('100%')
+    .backgroundColor($r('app.color.card_background'))
+    .expandSafeArea()
+  }
+
+  @Builder
+  LoadingState() {
+    if (this.isLoading) {
+      Column() {
+        LoadingProgress()
+          .width(48)
+          .height(48)
+          .color($r('app.color.primary_blue'))
+        Text('搜索中...')
+          .fontSize(14)
+          .fontColor($r('app.color.text_secondary'))
+          .margin({ top: 12 })
+      }
+      .width('100%')
+      .height('100%')
+      .justifyContent(FlexAlign.Center)
+    }
+  }
+
+  @Builder
+  EmptyState() {
+    if (!this.searchText) {
+      Column() {
+        Text('搜索你想听的')
+          .fontSize(16)
+          .fontColor($r('app.color.text_secondary'))
+          .margin({ top: 16 })
+      }
+      .width('100%')
+      .height('100%')
+      .justifyContent(FlexAlign.Center)
+    } else if (this.showResults && (!this.searchResults || this.searchResults.length === 0)) {
+      Column() {
+        Image($r('app.media.ic_brush'))
+          .width(120)
+          .height(120)
+          .fillColor($r('app.color.icon_color'))
+          .opacity(0.5)
+        Text('暂无搜索结果')
+          .fontSize(16)
+          .fontColor($r('app.color.text_secondary'))
+          .margin({ top: 16 })
+      }
+      .width('100%')
+      .height('100%')
+      .justifyContent(FlexAlign.Center)
+    }
+  }
+
+  @Builder
+  SearchResults() {
+    if (!this.isLoading && this.showResults && this.searchResults?.length > 0) {
+      List() {
+        ListItem() {
+          Text('搜索结果')
+            .fontSize(14)
+            .fontColor($r('app.color.text_secondary'))
+            .padding({ left: 16, top: 8, bottom: 8 })
+        }
+
+        ForEach(this.searchResults, (song: SongDetail, index: number) => {
+          ListItem() {
+            SongListCard({
+              title: song.name,
+              artist: song.ar as ESObject as Artist[],
+              coverUrl: cover(song.al.picUrl, 100),
+              index,
+              coverSize: 56,
+              tns: song.tns,
+              disabled: song.privilege ? song.privilege.st < 0 : false,
+              active: (!!this.track && this.track.track.id == song.id) ?? false,
+              rightSlot: () => {
+                this.MoreActions(song)
+              }
+            })
+              .onClick(() => {
+                if (this.searchResults && this.searchResults.length > 0) {
+                  const info = {
+                    track: song as ESObject as Track,
+                    privilege: song.privilege as ESObject as Privilege
+                  } as TrackAndPrivilege
+                  globalPlaylist.insertTop(info)
+                  AppStorage.setOrCreate("Track", info);
+                  router.pushUrl({
+                    url: 'pages/Playing'
+                  }, router.RouterMode.Single)
+                }
+              })
+          }.expandSafeArea()
+        })
+      }
+      .scrollBar(BarState.Off)
+      .width('100%')
+      .layoutWeight(1)
+      .expandSafeArea()
+    }
+  }
+
+  build() {
+    Stack() {
+      Column() {
+        // 搜索头部和标签栏
+        this.SearchHeader()
+
+        // 主内容区域
+        Stack() {
+          this.EmptyState()
+          this.LoadingState()
+          this.SearchResults()
+        }
+        .layoutWeight(1)
+      }
+      .width('100%')
+      .height('100%')
+      .backgroundColor($r('app.color.search_background'))
+      .expandSafeArea()
+    }
+    .width('100%')
+    .height('100%')
+  }
+}

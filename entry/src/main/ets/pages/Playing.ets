@@ -16,7 +16,7 @@ struct Playing {
   @State duration: number = 0
   @State isProgressBarExpanded: boolean = false
   @State selectedTabIndex: number = 0
-  @State isFavorite: boolean = false
+  @StorageLink("TrackLike") isFavorite: boolean = false
   @State isPlaying: boolean = false
   @State playMode: PlayMode = globalPlaylist.getPlayMode()
   @State showPlaylist: boolean = false
@@ -33,6 +33,7 @@ struct Playing {
       PlayList({ showPlaylist: $showPlaylist })
     }
     .height("100%")
+    .backgroundColor($r('app.color.playlist_bg'))
     .layoutWeight(1)
   }
 
@@ -73,10 +74,6 @@ struct Playing {
 
     EventBus.listen<PlayMode>('PlayModeSet', () => {
       this.playMode = globalPlaylist.playMode
-    })
-
-    EventBus.listen<number>('TrackLike', (like) => {
-      this.isFavorite = like == 1
     })
   }
 
@@ -175,12 +172,12 @@ struct Playing {
   private coverWidth = new BreakPointType({
     sm: '85%',
     md: '75%',
-    lg: '65%'
+    lg: '45%'
   })
   private buttonSize = new BreakPointType({
     sm: 48,
     md: 56,
-    lg: 64
+    lg: 56
   })
 
   @Builder
@@ -315,36 +312,39 @@ struct Playing {
                 .aspectRatio(1)
                 .borderRadius(24)
                 .margin({ top: 48 })
-                .shadow({ radius: 24, color: 'rgba(0, 0, 0, 0.2)', offsetY: 12 })
+                .shadow({ radius: 24, color: $r('app.color.shadow_color'), offsetY: 12 })
 
               Text(this.track?.track.name)
                 .fontSize(this.getFontSize(this.track?.track.name ?? "", 28, 24))
                 .fontWeight(FontWeight.Bold)
                 .maxLines(1)
                 .margin({ top: 24 })
-                .fontColor(Color.White)
+                .fontColor($r('app.color.text_primary'))
 
               Text(this.track?.track.ar.map(item => item.name).join(" / "))
                 .fontSize(16)
-                .fontColor('rgba(255, 255, 255, 0.6)')
+                .fontColor($r('app.color.text_secondary'))
                 .margin({ top: 8 })
 
-              this.ProgressBar()
-              this.PlayerControls()
-              this.ActionControls()
+              Column() {
+                this.ActionControls()
+                this.ProgressBar()
+                this.PlayerControls()
+              }
+              .margin({ top: 24 })
+              .layoutWeight(1)
+              .justifyContent(FlexAlign.End)
             }
             .width('60%')
             .height('100%')
             .alignItems(HorizontalAlign.Center)
+            .padding({ bottom: 32 })
 
             Column() {
               LyricView()
             }
             .width('40%')
             .height('100%')
-            .backgroundColor('rgba(255, 255, 255, 0.1)')
-            .backdropBlur(20)
-            .borderRadius(32)
             .expandSafeArea()
             .padding(16)
           }
@@ -372,9 +372,9 @@ struct Playing {
                   .fontColor('rgba(255, 255, 255, 0.6)')
                   .margin({ top: 8 })
 
+                this.ActionControls()
                 this.ProgressBar()
                 this.PlayerControls()
-                this.ActionControls()
               }
               .width('100%')
               .height('100%')
@@ -388,9 +388,6 @@ struct Playing {
               }
               .width('100%')
               .height('100%')
-              .backgroundColor('rgba(255, 255, 255, 0.1)')
-              .backdropBlur(20)
-              .borderRadius(32)
               .expandSafeArea()
               .padding(16)
             }
@@ -412,7 +409,8 @@ struct Playing {
       showClose: false,
       detents: [SheetSize.MEDIUM, SheetSize.LARGE],
       dragBar: false,
-      scrollSizeMode: ScrollSizeMode.CONTINUOUS
+      scrollSizeMode: ScrollSizeMode.CONTINUOUS,
+      backgroundColor: $r('app.color.playlist_bg'),
     })
   }
 }

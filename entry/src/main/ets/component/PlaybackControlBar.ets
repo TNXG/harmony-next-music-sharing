@@ -22,6 +22,7 @@ export struct PlaybackControlBar {
       PlayList({ showPlaylist: $showPlaylist })
     }
     .height("100%")
+    .backgroundColor($r('app.color.playlist_bg'))
     .layoutWeight(1)
   }
 
@@ -71,7 +72,7 @@ export struct PlaybackControlBar {
       Row({ space: 8 }) {
         Text(this.formatTime(this.currentTime))
           .fontSize(12)
-          .fontColor('rgba(0, 0, 0, 0.6)')
+          .fontColor($r('app.color.time_text'))
           .margin({ top: 2 })
 
         Slider({
@@ -81,8 +82,8 @@ export struct PlaybackControlBar {
           style: SliderStyle.NONE
         })
           .trackThickness(this.isProgressBarExpanded ? 12 : 4)
-          .selectedColor('#666666')
-          .trackColor('rgba(0, 0, 0, 0.15)')
+          .selectedColor($r('app.color.progress_thumb'))
+          .trackColor($r('app.color.progress_track'))
           .width("70%")
           .onChange((value: number) => {
             this.currentTime = value
@@ -100,7 +101,7 @@ export struct PlaybackControlBar {
 
         Text(this.formatTime(this.duration))
           .fontSize(12)
-          .fontColor('rgba(0, 0, 0, 0.6)')
+          .fontColor($r('app.color.time_text'))
           .margin({ top: 2 })
       }
       .justifyContent(FlexAlign.Center)
@@ -115,9 +116,9 @@ export struct PlaybackControlBar {
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor('#F5F5F5')
+        .backgroundColor($r('app.color.playbar_background'))
 
-      Column({ space: 4 }) { // 添加纵向间距
+      Column({ space: 4 }) {
         // 主控制栏
         Row() {
           // 封面图
@@ -131,13 +132,13 @@ export struct PlaybackControlBar {
             Text(this.track?.track.name ?? "")
               .fontSize(16)
               .fontWeight(FontWeight.Medium)
-              .fontColor('#333333')
+              .fontColor($r('app.color.song_title'))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
 
             Text(this.track?.track.ar.map(item => item.name).join(" / ") ?? "")
               .fontSize(13)
-              .fontColor('rgba(0, 0, 0, 0.6)')
+              .fontColor($r('app.color.song_artist'))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
@@ -152,11 +153,11 @@ export struct PlaybackControlBar {
               Image($r('app.media.ic_prev'))
                 .width(22)
                 .height(22)
-                .fillColor('#333333')
+                .fillColor($r('app.color.song_title'))
             }
             .width(36)
             .height(36)
-            .backgroundColor('rgba(0, 0, 0, 0.05)')
+            .backgroundColor($r('app.color.control_button_bg'))
             .onClick(() => {
               globalPlaylist.playPrevious()
             })
@@ -166,11 +167,11 @@ export struct PlaybackControlBar {
               Image(this.isPlaying ? $r('app.media.ic_pause') : $r('app.media.ic_play'))
                 .width(28)
                 .height(28)
-                .fillColor('#333333')
+                .fillColor($r('app.color.song_title'))
             }
             .width(44)
             .height(44)
-            .backgroundColor('rgba(0, 0, 0, 0.05)')
+            .backgroundColor($r('app.color.control_button_bg'))
             .onClick(() => {
               if (this.isPlaying) {
                 this.playerManager.pause()
@@ -184,11 +185,11 @@ export struct PlaybackControlBar {
               Image($r('app.media.ic_next'))
                 .width(22)
                 .height(22)
-                .fillColor('#333333')
+                .fillColor($r('app.color.song_title'))
             }
             .width(36)
             .height(36)
-            .backgroundColor('rgba(0, 0, 0, 0.05)')
+            .backgroundColor($r('app.color.control_button_bg'))
             .onClick(() => {
               globalPlaylist.playNext()
             })
@@ -198,12 +199,12 @@ export struct PlaybackControlBar {
               Image($r('app.media.ic_list'))
                 .width(22)
                 .height(22)
-                .fillColor('#333333')
+                .fillColor($r('app.color.song_title'))
             }
             .width(36)
             .height(36)
             .margin({ left: 4 })
-            .backgroundColor('rgba(0, 0, 0, 0.05)')
+            .backgroundColor($r('app.color.control_button_bg'))
             .onClick(() => {
               this.showPlaylist = true
             })
@@ -213,14 +214,14 @@ export struct PlaybackControlBar {
         .width('100%')
         .height(52)
         .padding({ left: 16, right: 4, top: 16 })
-        .justifyContent(FlexAlign.Center) // 垂直居中对齐
+        .justifyContent(FlexAlign.Center)
 
         // 进度条
         this.ProgressBar()
       }
       .width('100%')
       .height('100%')
-      .justifyContent(FlexAlign.SpaceBetween) // 主栏和进度条之间分配空间
+      .justifyContent(FlexAlign.SpaceBetween)
     }
     .width('100%')
     .height(84)
@@ -234,7 +235,8 @@ export struct PlaybackControlBar {
       showClose: false,
       detents: [SheetSize.MEDIUM, SheetSize.LARGE],
       dragBar: false,
-      scrollSizeMode: ScrollSizeMode.CONTINUOUS
+      scrollSizeMode: ScrollSizeMode.CONTINUOUS,
+      backgroundColor: $r('app.color.playlist_bg')
     })
   }
 }

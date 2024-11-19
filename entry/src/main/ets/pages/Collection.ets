@@ -1,4 +1,4 @@
-import { Creator, Privilege, Track, TrackAndPrivilege, TrackId } from "../type/Playlist"
+import { Creator, Privilege, Track, TrackAndPrivilege, TrackId, UserPlaylistResponse } from "../type/Playlist"
 import { cover } from "../common/APIHelper"
 import { StyleConstants } from '../common/Constant'
 import { SongListCard } from '../component/SongListCard'
@@ -87,7 +87,7 @@ struct Collection {
         LoadingProgress()
           .width(24)
           .height(24)
-          .color('#666')
+          .color($r('app.color.text_secondary'))
       }
       .width('100%')
       .height(48)
@@ -104,6 +104,31 @@ struct Collection {
   }
 
   @Builder
+  MoreActions(track: Track) {
+    Button({ type: ButtonType.Circle }) {
+      Image($r('app.media.ic_more'))
+        .width(24)
+        .height(24)
+        .fillColor($r('app.color.icon_color'))
+    }
+    .width(36)
+    .height(36)
+    .backgroundColor(Color.Transparent)
+    .bindMenu([
+      {
+        value: '添加到下一首',
+        action: () => {
+          const trackAndPrivilege: TrackAndPrivilege = {
+            track,
+            privilege: this.privilegeMap.get(track.id)!
+          }
+          globalPlaylist.insertOrMoveNext(trackAndPrivilege)
+        }
+      },
+    ])
+  }
+
+  @Builder
   SkeletonLoading() {
     Column() {
       Row() {
@@ -111,19 +136,19 @@ struct Collection {
           .width(120)
           .height(120)
           .borderRadius(12)
-          .backgroundColor('#f5f5f5')
+          .backgroundColor($r('app.color.skeleton_background'))
           .margin({ right: 16 })
 
         Column() {
           Row()
             .width('60%')
             .height(24)
-            .backgroundColor('#f5f5f5')
+            .backgroundColor($r('app.color.skeleton_background'))
             .margin({ bottom: 8 })
           Row()
             .width('40%')
             .height(16)
-            .backgroundColor('#f5f5f5')
+            .backgroundColor($r('app.color.skeleton_background'))
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
@@ -136,12 +161,12 @@ struct Collection {
           Row()
             .width(100)
             .height(40)
-            .backgroundColor('#f5f5f5')
+            .backgroundColor($r('app.color.skeleton_background'))
             .borderRadius(20)
           Row()
             .width(100)
             .height(40)
-            .backgroundColor('#f5f5f5')
+            .backgroundColor($r('app.color.skeleton_background'))
             .borderRadius(20)
         }
         .width('100%')
@@ -153,19 +178,19 @@ struct Collection {
             Row()
               .width(40)
               .height(40)
-              .backgroundColor('#f5f5f5')
+              .backgroundColor($r('app.color.skeleton_background'))
               .borderRadius(4)
               .margin({ right: 12 })
             Column() {
               Row()
                 .width('80%')
                 .height(16)
-                .backgroundColor('#f5f5f5')
+                .backgroundColor($r('app.color.skeleton_background'))
                 .margin({ bottom: 8 })
               Row()
                 .width('50%')
                 .height(14)
-                .backgroundColor('#f5f5f5')
+                .backgroundColor($r('app.color.skeleton_background'))
             }
             .alignItems(HorizontalAlign.Start)
             .layoutWeight(1)
@@ -175,7 +200,7 @@ struct Collection {
         })
       }
       .width('100%')
-      .backgroundColor(Color.White)
+      .backgroundColor($r('app.color.page_background'))
       .borderRadius({ topLeft: 32, topRight: 32 })
     }
     .width('100%')
@@ -328,10 +353,10 @@ struct Collection {
             Image($r('app.media.ic_play'))
               .width(20)
               .height(20)
-              .fillColor('#666')
+              .fillColor($r('app.color.icon_color'))
               .margin({ right: 8 })
             Text('播放全部')
-              .fontColor('#666')
+              .fontColor($r('app.color.text_secondary'))
               .fontSize(16)
           }
           .padding({ left: 16, right: 16 })
@@ -369,10 +394,10 @@ struct Collection {
           Image(this.subscribed ? $r("app.media.ic_checkmark") : $r('app.media.ic_plus'))
             .width(20)
             .height(20)
-            .fillColor('#666')
+            .fillColor($r('app.color.icon_color'))
             .margin({ right: 8 })
           Text(this.subscribed ? '取消收藏' : '收藏歌单')
-            .fontColor('#666')
+            .fontColor($r('app.color.text_secondary'))
             .fontSize(16)
         }
         .visibility(this.isCreator ? Visibility.None : Visibility.Visible)
@@ -403,7 +428,10 @@ struct Collection {
         index,
         tns: track.tns,
         disabled: !this.privilegeMap.get(track.id) || this.privilegeMap.get(track.id)!.st < 0,
-        active: (!!this.track && this.track.track.id == track.id) ?? false
+        active: (!!this.track && this.track.track.id == track.id) ?? false,
+        rightSlot:() => {
+          this.MoreActions(track)
+        }
       })
         .transition({
           type: TransitionType.Insert,
@@ -454,7 +482,7 @@ struct Collection {
         .height(260)
         .blur(20)
         .opacity(0.6)
-        .backgroundColor('#f5f5f5')
+        .backgroundColor($r('app.color.skeleton_background'))
         .position({ x: 0, y: 0 })
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
@@ -502,13 +530,6 @@ struct Collection {
           .padding(16)
 
           Column() {
-            if (this.profile === null) {
-              Text('登录后查看更多')
-                .fontSize(14)
-                .fontColor('#999')
-                .margin({ bottom: 12 })
-            }
-
             this.ActionBar()
 
             List({ space: 16 }) {
@@ -531,7 +552,7 @@ struct Collection {
                 if (this.profile === null && this.dataSource!.totalCount() > 20) {
                   Text('官方限制未登录只能查看20首')
                     .fontSize(14)
-                    .fontColor('#999')
+                    .fontColor($r('app.color.text_tertiary'))
                     .margin({ top: 12, bottom: 12 })
                     .width('100%')
                     .textAlign(TextAlign.Center)
@@ -552,11 +573,11 @@ struct Collection {
           }
           .width(StyleConstants.FULL_WIDTH)
           .layoutWeight(1)
-          .backgroundColor(Color.White)
+          .backgroundColor($r('app.color.page_background'))
           .borderRadius({ topLeft: 32, topRight: 32 })
           .shadow({
             radius: 24,
-            color: '#00000010',
+            color: $r('app.color.shadow_light'),
             offsetX: 0,
             offsetY: -2
           })
@@ -573,6 +594,7 @@ struct Collection {
     }
     .width(StyleConstants.FULL_WIDTH)
     .height(StyleConstants.FULL_HEIGHT)
-    .backgroundColor(Color.White)
+    .backgroundColor($r('app.color.page_background'))
+    .expandSafeArea()
   }
 }

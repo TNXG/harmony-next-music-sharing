@@ -3,22 +3,22 @@ import { StyleConstants } from "../common/Constant"
 @Component
 export struct PlaylistCard {
   @Prop count: number
-  @Prop coverUrl: string // 封面URL
-  @Prop title: string // 标题
-  @Prop creator: string // 创建者
-  @Prop index: number = 0 // 序号
-  @Prop coverSize?: number = 56 // 封面尺寸
+  @Prop coverUrl: string
+  @Prop title: string
+  @Prop creator: string
+  @Prop index: number = 0
+  @Prop coverSize?: number = 56
+  @BuilderParam rightSlot?: () => void // 添加右侧插槽
 
   build() {
-    Stack() { // 使用Stack来创建卡片效果
-      // 卡片主体
+    Stack() {
       Column() {
         Row() {
           // 序号
           Column() {
             Text((this.index + 1).toString())
               .fontSize(16)
-              .fontColor('#999')
+              .fontColor($r('app.color.playlist_index'))
               .width(36)
               .textAlign(TextAlign.Center)
           }
@@ -38,7 +38,7 @@ export struct PlaylistCard {
             Text(`${this.count}首`)
               .fontSize(12)
               .fontWeight(StyleConstants.FONT_WEIGHT_FIVE)
-              .fontColor('#86868b')
+              .fontColor($r('app.color.playlist_count'))
               .maxLines(1)
               .padding({ right: 12 })
               .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -46,13 +46,14 @@ export struct PlaylistCard {
             Text(this.title)
               .fontSize(16)
               .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_primary'))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
 
             Row() {
               Text(this.creator)
                 .fontSize(14)
-                .fontColor('#86868b')
+                .fontColor($r('app.color.playlist_creator'))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
             }
@@ -62,6 +63,15 @@ export struct PlaylistCard {
           .margin({ left: 12 })
           .alignItems(HorizontalAlign.Start)
           .justifyContent(FlexAlign.Center)
+
+          // 右侧插槽
+          if (this.rightSlot) {
+            Column() {
+              this.rightSlot()
+            }
+            .height('100%')
+            .justifyContent(FlexAlign.Center)
+          }
         }
         .width('100%')
         .height(80)
@@ -69,11 +79,11 @@ export struct PlaylistCard {
         .borderRadius(16)
       }
       .width('100%')
-      .backgroundColor(Color.White)
+      .backgroundColor(Color.Transparent)
       .borderRadius(16)
       .shadow({
         radius: 20,
-        color: '#00000015',
+        color: $r('app.color.playlist_card_shadow'),
         offsetX: 0,
         offsetY: 2
       })

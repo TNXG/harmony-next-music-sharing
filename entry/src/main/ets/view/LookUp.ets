@@ -77,12 +77,12 @@ export struct LookUp {
         Row()
           .width('40%')
           .height(24)
-          .backgroundColor('#f5f5f5')
+          .backgroundColor($r('app.color.skeleton_loading'))
           .borderRadius(12)
         Row()
           .width('20%')
           .height(16)
-          .backgroundColor('#f5f5f5')
+          .backgroundColor($r('app.color.skeleton_loading'))
           .borderRadius(8)
       }
       .padding({ left: 16, right: 16 })
@@ -97,13 +97,13 @@ export struct LookUp {
             Row()
               .width('40%')
               .aspectRatio(1)
-              .backgroundColor('#f5f5f5')
+              .backgroundColor($r('app.color.skeleton_loading'))
               .borderRadius(16)
               .margin(5)
             Row()
               .width('40%')
               .height(16)
-              .backgroundColor('#f5f5f5')
+              .backgroundColor($r('app.color.skeleton_loading'))
               .borderRadius(8)
               .margin({ top: 8 })
           }
@@ -117,7 +117,7 @@ export struct LookUp {
         Row()
           .width('40%')
           .height(24)
-          .backgroundColor('#f5f5f5')
+          .backgroundColor($r('app.color.skeleton_loading'))
           .borderRadius(12)
       }
       .padding({ left: 16, right: 16 })
@@ -129,12 +129,12 @@ export struct LookUp {
         Row()
           .width('45%')
           .height(120)
-          .backgroundColor('#f5f5f5')
+          .backgroundColor($r('app.color.skeleton_loading'))
           .borderRadius(16)
         Row()
           .width('45%')
           .height(120)
-          .backgroundColor('#f5f5f5')
+          .backgroundColor($r('app.color.skeleton_loading'))
           .borderRadius(16)
       }
       .padding(16)
@@ -145,7 +145,7 @@ export struct LookUp {
         Row()
           .width('40%')
           .height(24)
-          .backgroundColor('#f5f5f5')
+          .backgroundColor($r('app.color.skeleton_loading'))
           .borderRadius(12)
       }
       .padding({ left: 16, right: 16 })
@@ -159,13 +159,13 @@ export struct LookUp {
             Row()
               .width('30%')
               .aspectRatio(1)
-              .backgroundColor('#f5f5f5')
+              .backgroundColor($r('app.color.skeleton_loading'))
               .borderRadius(100)
               .margin(5)
             Row()
               .width('30%')
               .height(16)
-              .backgroundColor('#f5f5f5')
+              .backgroundColor($r('app.color.skeleton_loading'))
               .borderRadius(8)
               .margin({ top: 8 })
           }
@@ -185,8 +185,12 @@ export struct LookUp {
   MainContent() {
     Column() {
       Row() {
-        Text("推荐歌单").font({ size: 24, weight: StyleConstants.FONT_WEIGHT_SEVEN })
-        Text("查看更多").font({ size: 14, weight: StyleConstants.FONT_WEIGHT_FOUR }).fontColor(Color.Gray)
+        Text("推荐歌单")
+          .font({ size: 24, weight: StyleConstants.FONT_WEIGHT_SEVEN })
+          .fontColor($r('app.color.title_text'))
+        Text("查看更多")
+          .font({ size: 14, weight: StyleConstants.FONT_WEIGHT_FOUR })
+          .fontColor($r('app.color.more_text'))
           .onClick(() => {
             this.waiting()
           })
@@ -200,7 +204,9 @@ export struct LookUp {
       }
 
       Row() {
-        Text("为你准备").font({ size: 24, weight: StyleConstants.FONT_WEIGHT_SEVEN })
+        Text("为你准备")
+          .font({ size: 24, weight: StyleConstants.FONT_WEIGHT_SEVEN })
+          .fontColor($r('app.color.title_text'))
       }
       .padding({ left: 16, right: 16 })
       .width(StyleConstants.FULL_WIDTH)
@@ -227,7 +233,9 @@ export struct LookUp {
       .width('100%')
 
       Row() {
-        Text("推荐艺人").font({ size: 24, weight: StyleConstants.FONT_WEIGHT_SEVEN })
+        Text("推荐艺人")
+          .font({ size: 24, weight: StyleConstants.FONT_WEIGHT_SEVEN })
+          .fontColor($r('app.color.title_text'))
       }
       .padding({ left: 16, right: 16 })
       .width(StyleConstants.FULL_WIDTH)
@@ -238,8 +246,12 @@ export struct LookUp {
       }
 
       Row() {
-        Text("新专速递").font({ size: 24, weight: StyleConstants.FONT_WEIGHT_SEVEN })
-        Text("查看更多").font({ size: 14, weight: StyleConstants.FONT_WEIGHT_FOUR }).fontColor(Color.Gray)
+        Text("新专速递")
+          .font({ size: 24, weight: StyleConstants.FONT_WEIGHT_SEVEN })
+          .fontColor($r('app.color.title_text'))
+        Text("查看更多")
+          .font({ size: 14, weight: StyleConstants.FONT_WEIGHT_FOUR })
+          .fontColor($r('app.color.more_text'))
           .onClick(() => {
             this.waiting()
           })
@@ -253,8 +265,12 @@ export struct LookUp {
       }
 
       Row() {
-        Text("为你打Call").font({ size: 24, weight: StyleConstants.FONT_WEIGHT_SEVEN })
-        Text("查看更多").font({ size: 14, weight: StyleConstants.FONT_WEIGHT_FOUR }).fontColor(Color.Gray)
+        Text("为你打Call")
+          .font({ size: 24, weight: StyleConstants.FONT_WEIGHT_SEVEN })
+          .fontColor($r('app.color.title_text'))
+        Text("查看更多")
+          .font({ size: 14, weight: StyleConstants.FONT_WEIGHT_FOUR })
+          .fontColor($r('app.color.more_text'))
           .onClick(() => {
             this.waiting()
           })
@@ -392,10 +408,6 @@ export struct LookUp {
   build() {
     Column() {
       SearchBar({
-        // rightSlot: this.Refresh
-        onSearch: () => {
-          this.waiting()
-        }
       })
 
       List() {
@@ -414,5 +426,6 @@ export struct LookUp {
     }
     .width(StyleConstants.FULL_WIDTH)
     .height(StyleConstants.FULL_HEIGHT)
+    .backgroundColor($r('app.color.page_background'))
   }
 }

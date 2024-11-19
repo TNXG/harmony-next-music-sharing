@@ -12,6 +12,17 @@ export struct SongListCard {
   @Prop disabled?: boolean = false
   @Prop active?: boolean = false
   @Prop showIndex: boolean = true
+  @BuilderParam rightSlot?: () => void // 添加右侧插槽
+
+  private getTextColor(defaultColor: Resource) {
+    if (this.disabled) {
+      return $r('app.color.song_number_text_disabled')
+    }
+    if (this.active) {
+      return $r('app.color.song_active_color')
+    }
+    return defaultColor
+  }
 
   build() {
     Column() {
@@ -25,12 +36,12 @@ export struct SongListCard {
               .height(36)
               .borderRadius(8)
               .backdropBlur(16)
-              .backgroundColor(!this.active ? 'rgba(245, 245, 245, 0.6)' : 'transparent')
+              .backgroundColor(!this.active ? $r('app.color.song_number_bg') : 'transparent')
 
             // 序号文本
             Text((this.index + 1).toString())
               .fontSize(14)
-              .fontColor(this.disabled ? '#CCCCCC' : (this.active ? '#3478F6' : '#999999'))
+              .fontColor(this.getTextColor($r('app.color.song_number_text_normal')))
               .fontWeight(FontWeight.Medium)
           }
           .width(36)
@@ -51,12 +62,12 @@ export struct SongListCard {
               Span(this.title)
                 .fontSize(16)
                 .fontWeight(FontWeight.Medium)
-                .fontColor(this.disabled ? '#CCCCCC' : (this.active ? '#3478F6' : '#000000'))
+                .fontColor(this.getTextColor($r('app.color.text_primary')))
               if (this.tns) {
                 Span(`(${this.tns.join("/")})`)
                   .fontSize(16)
                   .fontWeight(FontWeight.Medium)
-                  .fontColor(this.disabled ? '#CCCCCC' : (this.active ? '#3478F6' : '#86868b'))
+                  .fontColor(this.getTextColor($r('app.color.song_translation')))
               }
             }
             .maxLines(1)
@@ -64,7 +75,7 @@ export struct SongListCard {
 
             Text(this.artist.map(item => item.name).join("/"))
               .fontSize(14)
-              .fontColor(this.disabled ? '#CCCCCC' : (this.active ? '#3478F6' : '#86868b'))
+              .fontColor(this.getTextColor($r('app.color.song_translation')))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
               .alignSelf(ItemAlign.Start)
@@ -74,13 +85,23 @@ export struct SongListCard {
         .layoutWeight(1)
         .margin({ left: 12 })
         .alignItems(HorizontalAlign.Start)
+
+        // 右侧插槽
+        if (this.rightSlot) {
+          Row() {
+            this.rightSlot()
+          }
+          .height('100%')
+          .alignItems(VerticalAlign.Center)
+          .margin({ left: 12 })
+        }
       }
       .width(StyleConstants.FULL_WIDTH)
       .height(this.active ? 80 : 64)
       .padding({ left: 12, right: 16 })
       .opacity(this.disabled ? 0.6 : 1)
       .borderRadius(16)
-      .backgroundColor(this.active ? 'rgba(52, 120, 246, 0.1)' : 'transparent')
+      .backgroundColor(this.active ? $r('app.color.song_active_bg') : 'transparent')
       .animation({
         duration: 200,
         curve: Curve.EaseOut

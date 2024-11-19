@@ -57,11 +57,11 @@ export struct Library {
       Login()
     } else {
       Column() {
-        // 顶部标题栏
         Row({ space: 8 }) {
           Row() {
             Text(`${this.profile.nickname}的音乐库`)
               .font({ size: 20, weight: StyleConstants.FONT_WEIGHT_SEVEN })
+              .fontColor($r('app.color.text_primary'))
           }
           .padding({ left: 16, right: 16 })
           .justifyContent(FlexAlign.SpaceBetween)
@@ -71,8 +71,7 @@ export struct Library {
           }.padding({ left: 16, right: 16 })
         }
         .width(StyleConstants.FULL_WIDTH)
-        // .backgroundImage($r("app.media.ic_background"))
-        // .backdropBlur(30)
+        .backgroundColor($r('app.color.page_background'))
         .expandSafeArea()
         .justifyContent(FlexAlign.SpaceBetween)
         .padding({
@@ -82,17 +81,15 @@ export struct Library {
           bottom: 8
         })
 
-        // 可滚动内容区域
         List({ space: 16 }) {
-          // 我喜欢的音乐
           ListItem() {
-            Row() { // 添加 Row 容器
+            Row() {
               PersonFavorite({
                 count: this.userPlayListDetail?.playlist[0]?.trackCount ?? 0
               })
             }
-            .width(StyleConstants.FULL_WIDTH) // 设置宽度
-            .justifyContent(FlexAlign.Center) // 水平居中
+            .width(StyleConstants.FULL_WIDTH)
+            .justifyContent(FlexAlign.Center)
             .onClick(() => {
               AppStorage.setOrCreate("CollectionId", this.userPlayListDetail?.playlist[0].id)
               router.pushUrl({
@@ -101,7 +98,6 @@ export struct Library {
             })
           }
 
-          // 创建的歌单
           ListItem() {
             Grid() {
               ForEach(this.userPlayListDetail?.playlist.slice(1), (item: Playlist, index) => {
@@ -129,12 +125,13 @@ export struct Library {
           }
         }
         .width(StyleConstants.FULL_WIDTH)
-        .layoutWeight(1) // 占据剩余空间
-        .edgeEffect(EdgeEffect.Spring) // 添加回弹效果
+        .layoutWeight(1)
+        .edgeEffect(EdgeEffect.Spring)
         .scrollBar(BarState.Off)
       }
       .width(StyleConstants.FULL_WIDTH)
       .height(StyleConstants.FULL_HEIGHT)
+      .backgroundColor($r('app.color.page_background'))
     }
   }
 }
