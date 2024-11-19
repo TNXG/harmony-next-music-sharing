@@ -223,7 +223,7 @@ async function startPlaySong(track: TrackAndPrivilege) {
         isFavorite: isLike
       })
     }
-    EventBus.send("TrackLike", isLike ? 1 : 0)
+    AppStorage.setOrCreate("TrackLike", track)
 
   } catch (e) {
     promptAction.showToast({
@@ -304,7 +304,7 @@ export default class EntryAbility extends UIAbility {
           isFavorite: !isLike
         })
       }
-      EventBus.send("TrackLike", isLike ? 0 : 1)
+      AppStorage.setOrCreate("TrackLike", !isLike)
     })
 
     EventBus.listen<PlayMode>('PlayModeSet', async (playMode) => {
