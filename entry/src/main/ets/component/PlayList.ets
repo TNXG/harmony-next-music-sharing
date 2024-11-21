@@ -203,6 +203,7 @@ export struct PlayList {
                 }
               })
           }
+          .reuseId('playlist')
           .swipeAction({ end: this.DeleteButton(track) })
           .animation({
             duration: 300,
@@ -217,6 +218,7 @@ export struct PlayList {
           }
         }
       }
+      .cachedCount(3)
       .width('100%')
       .layoutWeight(1)
       .listDirection(Axis.Vertical)

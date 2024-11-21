@@ -1,6 +1,6 @@
 import { AxiosResponse } from "@ohos/axios";
 import { SearchParams, SearchResponse } from "../type/Search";
-import { request } from "../common/RequestUtil"
+import { getRequest } from "../common/RequestUtil"
 
 /**
  * 搜索API接口实现
@@ -8,6 +8,7 @@ import { request } from "../common/RequestUtil"
  * @returns Promise<SearchResult>
  */
 export async function search(params: SearchParams): Promise<SearchResponse> {
+  const request = getRequest()
   let queryString: string = "/search?";
 
   // 构建查询参数
@@ -35,6 +36,7 @@ export async function search(params: SearchParams): Promise<SearchResponse> {
  * @returns Promise<SearchResult>
  */
 export async function cloudSearch(params: SearchParams): Promise<SearchResponse> {
+  const request = getRequest()
   let queryString: string = "/cloudsearch?";
 
   // 构建查询参数

@@ -9,17 +9,45 @@ import { PersonalFMCard } from '../component/PersonalFMCard'
 import { Artist, Playlist } from '../type/Toplist'
 import { ArtistCircleCard } from '../component/ArtistCircleCard'
 import { Album } from '../type/Album'
-import { promptAction, router } from '@kit.ArkUI'
+import { LengthMetrics, promptAction, router } from '@kit.ArkUI'
 import { PlaybackControlBar } from '../component/PlaybackControlBar'
+import { BreakPointType } from '../common/BreakpointSystem'
 
 @Component
 export struct LookUp {
+  @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
   @StorageLink("PersonalizedPlaylist") personalizedPlaylist: PersonalizedPlaylist[] | undefined = []
   @StorageLink("ToplistArtistList") toplistArtistList: Artist[] | undefined = []
   @StorageLink("NewAlbumList") newAlbumList: Album[] | undefined = []
   @StorageLink("TopListAlbumList") topListAlbumList: Playlist[] | undefined = []
   @State isRefreshing: boolean = false
   @State loadingContent: boolean = true
+  // 添加响应式断点配置
+  private imageWidth = new BreakPointType({
+    sm: '40%',
+    md: '30%',
+    lg: '20%'
+  })
+  private artistSize = new BreakPointType({
+    sm: '30%',
+    md: '25%',
+    lg: '15%'
+  })
+  private titleSize = new BreakPointType({
+    sm: 24,
+    md: 28,
+    lg: 32
+  })
+  private contentPadding = new BreakPointType({
+    sm: 16,
+    md: 24,
+    lg: 32
+  })
+  private cardWidth = new BreakPointType({
+    sm: '45%',
+    md: '45%',
+    lg: '30%'
+  })
 
   aboutToAppear() {
     this.initData()
@@ -46,37 +74,14 @@ export struct LookUp {
     }
   }
 
-  // async refreshData() {
-  //   try {
-  //     const result = await getPersonalizedCollection()
-  //     AppStorage.setOrCreate('PersonalizedPlaylist', result.result)
-  //   } catch (error) {
-  //     console.error('Refresh failed:', error)
-  //   } finally {
-  //     this.isRefreshing = false
-  //   }
-  // }
-  //
-  // @Builder
-  // Refresh() {
-  //   Row() {
-  //     Button({ type: ButtonType.Circle }) {
-  //       Image($r("app.media.ic_gearshape"))
-  //         .width(24)
-  //         .height(24)
-  //         .backgroundColor($r("app.color.page_background"))
-  //     }
-  //   }
-  // }
-
   @Builder
   SkeletonLoading() {
     Column() {
       // 推荐歌单骨架
       Row() {
         Row()
-          .width('40%')
-          .height(24)
+          .width(this.currentBreakpoint === 'lg' ? '30%' : '40%')
+          .height(this.titleSize.getValue(this.currentBreakpoint))
           .backgroundColor($r('app.color.skeleton_loading'))
           .borderRadius(12)
         Row()
@@ -85,7 +90,10 @@ export struct LookUp {
           .backgroundColor($r('app.color.skeleton_loading'))
           .borderRadius(8)
       }
-      .padding({ left: 16, right: 16 })
+      .padding({
+        left: this.contentPadding.getValue(this.currentBreakpoint),
+        right: this.contentPadding.getValue(this.currentBreakpoint)
+      })
       .width('100%')
       .justifyContent(FlexAlign.SpaceBetween)
       .margin({ bottom: 16 })
@@ -95,13 +103,13 @@ export struct LookUp {
         ForEach([1, 2, 3, 4], () => {
           Column() {
             Row()
-              .width('40%')
+              .width(this.imageWidth.getValue(this.currentBreakpoint))
               .aspectRatio(1)
               .backgroundColor($r('app.color.skeleton_loading'))
               .borderRadius(16)
               .margin(5)
             Row()
-              .width('40%')
+              .width(this.imageWidth.getValue(this.currentBreakpoint))
               .height(16)
               .backgroundColor($r('app.color.skeleton_loading'))
               .borderRadius(8)
@@ -109,46 +117,54 @@ export struct LookUp {
           }
         })
       }
-      .padding({ left: 16 })
+      .padding({
+        left: this.contentPadding.getValue(this.currentBreakpoint)
+      })
       .margin({ bottom: 24 })
 
       // 为你准备骨架
       Row() {
         Row()
           .width('40%')
-          .height(24)
+          .height(this.titleSize.getValue(this.currentBreakpoint))
           .backgroundColor($r('app.color.skeleton_loading'))
           .borderRadius(12)
       }
-      .padding({ left: 16, right: 16 })
+      .padding({
+        left: this.contentPadding.getValue(this.currentBreakpoint),
+        right: this.contentPadding.getValue(this.currentBreakpoint)
+      })
       .width('100%')
       .margin({ bottom: 16 })
 
       // 每日推荐和私人FM骨架
-      Flex({ justifyContent: FlexAlign.SpaceBetween }) {
+      Flex({ justifyContent: FlexAlign.Start }) {
         Row()
-          .width('45%')
-          .height(120)
+          .width(this.cardWidth.getValue(this.currentBreakpoint))
+          .height(100)
           .backgroundColor($r('app.color.skeleton_loading'))
           .borderRadius(16)
         Row()
-          .width('45%')
-          .height(120)
+          .width(this.cardWidth.getValue(this.currentBreakpoint))
+          .height(100)
           .backgroundColor($r('app.color.skeleton_loading'))
           .borderRadius(16)
       }
-      .padding(16)
+      .padding(this.contentPadding.getValue(this.currentBreakpoint))
       .margin({ bottom: 24 })
 
       // 推荐艺人骨架
       Row() {
         Row()
           .width('40%')
-          .height(24)
+          .height(this.titleSize.getValue(this.currentBreakpoint))
           .backgroundColor($r('app.color.skeleton_loading'))
           .borderRadius(12)
       }
-      .padding({ left: 16, right: 16 })
+      .padding({
+        left: this.contentPadding.getValue(this.currentBreakpoint),
+        right: this.contentPadding.getValue(this.currentBreakpoint)
+      })
       .width('100%')
       .margin({ bottom: 16 })
 
@@ -157,13 +173,13 @@ export struct LookUp {
         ForEach([1, 2, 3, 4], () => {
           Column() {
             Row()
-              .width('30%')
+              .width(this.artistSize.getValue(this.currentBreakpoint))
               .aspectRatio(1)
               .backgroundColor($r('app.color.skeleton_loading'))
               .borderRadius(100)
               .margin(5)
             Row()
-              .width('30%')
+              .width(this.artistSize.getValue(this.currentBreakpoint))
               .height(16)
               .backgroundColor($r('app.color.skeleton_loading'))
               .borderRadius(8)
@@ -171,7 +187,9 @@ export struct LookUp {
           }
         })
       }
-      .padding({ left: 16 })
+      .padding({
+        left: this.contentPadding.getValue(this.currentBreakpoint)
+      })
     }
     .width('100%')
     .transition({ type: TransitionType.All })
@@ -186,7 +204,10 @@ export struct LookUp {
     Column() {
       Row() {
         Text("推荐歌单")
-          .font({ size: 24, weight: StyleConstants.FONT_WEIGHT_SEVEN })
+          .font({
+            size: this.titleSize.getValue(this.currentBreakpoint),
+            weight: StyleConstants.FONT_WEIGHT_SEVEN
+          })
           .fontColor($r('app.color.title_text'))
         Text("查看更多")
           .font({ size: 14, weight: StyleConstants.FONT_WEIGHT_FOUR })
@@ -195,7 +216,10 @@ export struct LookUp {
             this.waiting()
           })
       }
-      .padding({ left: 16, right: 16 })
+      .padding({
+        left: this.contentPadding.getValue(this.currentBreakpoint),
+        right: this.contentPadding.getValue(this.currentBreakpoint)
+      })
       .width(StyleConstants.FULL_WIDTH)
       .justifyContent(FlexAlign.SpaceBetween)
 
@@ -203,19 +227,28 @@ export struct LookUp {
         this.RecommendCollection()
       }
 
+
       Row() {
         Text("为你准备")
-          .font({ size: 24, weight: StyleConstants.FONT_WEIGHT_SEVEN })
+          .font({
+            size: this.titleSize.getValue(this.currentBreakpoint),
+            weight: StyleConstants.FONT_WEIGHT_SEVEN
+          })
           .fontColor($r('app.color.title_text'))
       }
-      .padding({ left: 16, right: 16 })
+      .padding({
+        left: this.contentPadding.getValue(this.currentBreakpoint),
+        right: this.contentPadding.getValue(this.currentBreakpoint)
+      })
       .width(StyleConstants.FULL_WIDTH)
       .justifyContent(FlexAlign.SpaceBetween)
 
-      Flex({ justifyContent: FlexAlign.SpaceBetween }) {
+      Flex({ justifyContent: FlexAlign.Start, space: { main: LengthMetrics.px(16) } }) {
         Column() {
           DailyRecommendCard()
-        }.onClick(() => {
+        }
+        .width(this.cardWidth.getValue(this.currentBreakpoint))
+        .onClick(() => {
           router.pushUrl({
             url: "pages/Daily",
           })
@@ -223,21 +256,29 @@ export struct LookUp {
 
         Column() {
           PersonalFMCard()
-        }.onClick(() => {
+        }
+        .width(this.cardWidth.getValue(this.currentBreakpoint))
+        .onClick(() => {
           router.pushUrl({
             url: "pages/PersonalFm",
           })
         })
       }
-      .padding(16)
+      .padding(this.contentPadding.getValue(this.currentBreakpoint))
       .width('100%')
 
       Row() {
         Text("推荐艺人")
-          .font({ size: 24, weight: StyleConstants.FONT_WEIGHT_SEVEN })
+          .font({
+            size: this.titleSize.getValue(this.currentBreakpoint),
+            weight: StyleConstants.FONT_WEIGHT_SEVEN
+          })
           .fontColor($r('app.color.title_text'))
       }
-      .padding({ left: 16, right: 16 })
+      .padding({
+        left: this.contentPadding.getValue(this.currentBreakpoint),
+        right: this.contentPadding.getValue(this.currentBreakpoint)
+      })
       .width(StyleConstants.FULL_WIDTH)
       .justifyContent(FlexAlign.SpaceBetween)
 
@@ -247,7 +288,10 @@ export struct LookUp {
 
       Row() {
         Text("新专速递")
-          .font({ size: 24, weight: StyleConstants.FONT_WEIGHT_SEVEN })
+          .font({
+            size: this.titleSize.getValue(this.currentBreakpoint),
+            weight: StyleConstants.FONT_WEIGHT_SEVEN
+          })
           .fontColor($r('app.color.title_text'))
         Text("查看更多")
           .font({ size: 14, weight: StyleConstants.FONT_WEIGHT_FOUR })
@@ -256,7 +300,10 @@ export struct LookUp {
             this.waiting()
           })
       }
-      .padding({ left: 16, right: 16 })
+      .padding({
+        left: this.contentPadding.getValue(this.currentBreakpoint),
+        right: this.contentPadding.getValue(this.currentBreakpoint)
+      })
       .width(StyleConstants.FULL_WIDTH)
       .justifyContent(FlexAlign.SpaceBetween)
 
@@ -266,7 +313,10 @@ export struct LookUp {
 
       Row() {
         Text("为你打Call")
-          .font({ size: 24, weight: StyleConstants.FONT_WEIGHT_SEVEN })
+          .font({
+            size: this.titleSize.getValue(this.currentBreakpoint),
+            weight: StyleConstants.FONT_WEIGHT_SEVEN
+          })
           .fontColor($r('app.color.title_text'))
         Text("查看更多")
           .font({ size: 14, weight: StyleConstants.FONT_WEIGHT_FOUR })
@@ -275,7 +325,10 @@ export struct LookUp {
             this.waiting()
           })
       }
-      .padding({ left: 16, right: 16 })
+      .padding({
+        left: this.contentPadding.getValue(this.currentBreakpoint),
+        right: this.contentPadding.getValue(this.currentBreakpoint)
+      })
       .width(StyleConstants.FULL_WIDTH)
       .justifyContent(FlexAlign.SpaceBetween)
 
@@ -299,7 +352,7 @@ export struct LookUp {
         Column() {
           Image(cover(item.picUrl, 256))
             .alt(item.copywriter)
-            .width("40%")
+            .width(this.imageWidth.getValue(this.currentBreakpoint))
             .borderRadius(16)
             .aspectRatio(1)
             .objectFit(ImageFit.Cover)
@@ -307,7 +360,7 @@ export struct LookUp {
           Text(item.name)
             .font({ size: 16, weight: StyleConstants.FONT_WEIGHT_SEVEN })
             .textAlign(TextAlign.Start)
-            .width("40%")
+            .width(this.imageWidth.getValue(this.currentBreakpoint))
             .margin({ top: 8 })
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .maxLines(2)
@@ -329,7 +382,7 @@ export struct LookUp {
         Column() {
           Image(cover(item.picUrl, 256))
             .alt(item.name)
-            .width("40%")
+            .width(this.imageWidth.getValue(this.currentBreakpoint))
             .borderRadius(16)
             .aspectRatio(1)
             .objectFit(ImageFit.Cover)
@@ -337,7 +390,7 @@ export struct LookUp {
           Text(item.name)
             .font({ size: 16, weight: StyleConstants.FONT_WEIGHT_SEVEN })
             .textAlign(TextAlign.Start)
-            .width("40%")
+            .width(this.imageWidth.getValue(this.currentBreakpoint))
             .margin({ top: 8 })
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .maxLines(2)
@@ -355,7 +408,7 @@ export struct LookUp {
         Column() {
           ArtistCircleCard({
             imageUrl: cover(item.picUrl, 512),
-            sizeCard: "30%",
+            sizeCard: this.artistSize.getValue(this.currentBreakpoint),
             name: item.name
           })
         }
@@ -374,7 +427,7 @@ export struct LookUp {
         Column() {
           Image(cover(item.coverImgUrl, 256))
             .alt(item.name)
-            .width("40%")
+            .width(this.imageWidth.getValue(this.currentBreakpoint))
             .borderRadius(16)
             .aspectRatio(1)
             .objectFit(ImageFit.Cover)
@@ -382,14 +435,14 @@ export struct LookUp {
           Text(item.name)
             .font({ size: 16, weight: StyleConstants.FONT_WEIGHT_SEVEN })
             .textAlign(TextAlign.Start)
-            .width("40%")
+            .width(this.imageWidth.getValue(this.currentBreakpoint))
             .margin({ top: 8 })
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .maxLines(2)
           Text(item.updateFrequency)
             .font({ size: 12, weight: StyleConstants.FONT_WEIGHT_SEVEN })
             .textAlign(TextAlign.Start)
-            .width("40%")
+            .width(this.imageWidth.getValue(this.currentBreakpoint))
             .fontColor(Color.Gray)
             .margin({ top: 4 })
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -407,8 +460,7 @@ export struct LookUp {
 
   build() {
     Column() {
-      SearchBar({
-      })
+      SearchBar({})
 
       List() {
         ListItem() {

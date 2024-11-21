@@ -1,4 +1,4 @@
-import { router } from '@kit.ArkUI'
+import { promptAction, router } from '@kit.ArkUI'
 import { SongListCard } from '../component/SongListCard'
 import { SongDetail } from '../type/Song'
 import { cloudSearch as search } from "../api/Search"
@@ -6,6 +6,8 @@ import { globalPlaylist } from '../common/GlobalPlayListManager'
 import { TrackAndPrivilege, Track, Privilege } from '../type/Playlist'
 import { Artist } from '../type/Toplist'
 import { cover } from '../common/APIHelper'
+import { PlaylistSelector } from '../component/PlaylistSelector'
+import { collectSong } from '../api/Song'
 
 enum SearchType {
   SINGLE = 1,
@@ -25,16 +27,39 @@ struct CloudSearch {
   @State searchText: string = ''
   @State searchResults: SongDetail[] = []
   @State isLoading: boolean = false
+  @State isLoadingMore: boolean = false
   @State showResults: boolean = false
   @State currentTab: number = 0
+  @State offsetValue: number = 0
+  @State hasMore: boolean = true
+  private readonly pageSize: number = 20
   private searchController: SearchController = new SearchController()
   @StorageLink("Track") track: TrackAndPrivilege | null = null
   private tabs: TabItem[] = [
     { name: '单曲', type: SearchType.SINGLE },
-    // { name: '专辑', type: SearchType.ALBUM },
-    // { name: '歌手', type: SearchType.ARTIST },
-    // { name: '歌单', type: SearchType.PLAYLIST }
+  // { name: '专辑', type: SearchType.ALBUM },
+  // { name: '歌手', type: SearchType.ARTIST },
+  // { name: '歌单', type: SearchType.PLAYLIST }
   ]
+  @State showPlayListSelector: boolean = false
+  private nowSelected: number | string = 0;
+
+  @Builder
+  PlayList() {
+    Column() {
+      PlaylistSelector({
+        onSelect: async (id: string | number) => {
+          await collectSong(id, [this.nowSelected])
+          promptAction.showToast({ message: "已添加到收藏夹" })
+          this.showPlayListSelector = false;
+        }
+      })
+    }
+    .expandSafeArea()
+    .height("100%")
+    .backgroundColor($r('app.color.playlist_bg'))
+    .layoutWeight(1)
+  }
 
   @Builder
   MoreActions(track: SongDetail) {
@@ -51,11 +76,17 @@ struct CloudSearch {
       {
         value: '添加到下一首',
         action: () => {
-          const trackAndPrivilege: TrackAndPrivilege = {
-            track: track as ESObject as Track,
-            privilege: track.privilege as ESObject as Privilege
-          }
+          const trackAndPrivilege = new TrackAndPrivilege()
+          trackAndPrivilege.track = track as ESObject as Track
+          trackAndPrivilege.privilege = track.privilege as ESObject as Privilege
           globalPlaylist.insertOrMoveNext(trackAndPrivilege)
+        }
+      },
+      {
+        value: '收藏到歌单',
+        action: () => {
+          this.nowSelected = track.id
+          this.showPlayListSelector = true;
         }
       },
     ])
@@ -64,43 +95,76 @@ struct CloudSearch {
   aboutToAppear() {
     this.searchResults = []
     this.showResults = false
+    this.offsetValue = 0
+    this.hasMore = true
   }
 
-  async handleSearch() {
+  async handleSearch(loadMore: boolean = false) {
     if (!this.searchText.trim()) {
       this.searchResults = []
       this.showResults = false
       return
     }
 
-    this.isLoading = true
-    this.showResults = false
+    if (loadMore) {
+      if (this.isLoadingMore || !this.hasMore) {
+        return
+      }
+      this.isLoadingMore = true
+    } else {
+      this.isLoading = true
+      this.showResults = false
+      this.offsetValue = 0
+      this.hasMore = true
+    }
 
     try {
       const result = await search({
         keywords: this.searchText,
-        limit: 30,
-        offset: 0,
+        limit: this.pageSize,
+        offset: this.offsetValue,
         type: this.tabs[this.currentTab].type
       })
 
       if (result?.result?.songs) {
+        const newSongs = result.result.songs
+
+        // 检查是否还有更多数据
+        this.hasMore = newSongs.length === this.pageSize
+
         animateTo({
           duration: 300,
           curve: Curve.EaseOut
         }, () => {
-          this.searchResults = result.result.songs
+          if (loadMore) {
+            this.searchResults = [...this.searchResults, ...newSongs]
+          } else {
+            this.searchResults = newSongs
+          }
           this.showResults = true
         })
+
+        // 更新offset
+        this.offsetValue += 1
       } else {
-        this.searchResults = []
+        if (!loadMore) {
+          this.searchResults = []
+        }
+        this.hasMore = false
         this.showResults = true
       }
     } catch (error) {
-      this.searchResults = []
+      if (!loadMore) {
+        this.searchResults = []
+      }
       this.showResults = true
+      this.hasMore = false
     } finally {
-      this.isLoading = false
+      if (loadMore) {
+        this.isLoadingMore = false
+      } else {
+        this.isLoading = false
+      }
     }
   }
 
@@ -161,6 +225,34 @@ struct CloudSearch {
   }
 
   @Builder
+  LoadMoreIndicator() {
+    if (this.isLoadingMore) {
+      Row() {
+        LoadingProgress()
+          .width(24)
+          .height(24)
+          .color($r('app.color.text_secondary'))
+        Text('加载更多...')
+          .fontSize(14)
+          .fontColor($r('app.color.text_secondary'))
+          .margin({ left: 8 })
+      }
+      .width('100%')
+      .height(48)
+      .justifyContent(FlexAlign.Center)
+    } else if (!this.hasMore && this.searchResults.length > 0) {
+      Row() {
+        Text('没有更多了')
+          .fontSize(14)
+          .fontColor($r('app.color.text_tertiary'))
+      }
+      .width('100%')
+      .height(48)
+      .justifyContent(FlexAlign.Center)
+    }
+  }
+
+  @Builder
   EmptyState() {
     if (!this.searchText) {
       Column() {
@@ -193,7 +285,7 @@ struct CloudSearch {
   @Builder
   SearchResults() {
     if (!this.isLoading && this.showResults && this.searchResults?.length > 0) {
-      List() {
+      List({ space: 4 }) {
         ListItem() {
           Text('搜索结果')
             .fontSize(14)
@@ -218,10 +310,9 @@ struct CloudSearch {
             })
               .onClick(() => {
                 if (this.searchResults && this.searchResults.length > 0) {
-                  const info = {
-                    track: song as ESObject as Track,
-                    privilege: song.privilege as ESObject as Privilege
-                  } as TrackAndPrivilege
+                  const info = new TrackAndPrivilege()
+                  info.track = song as ESObject as Track
+                  info.privilege = song.privilege as ESObject as Privilege
                   globalPlaylist.insertTop(info)
                   AppStorage.setOrCreate("Track", info);
                   router.pushUrl({
@@ -231,10 +322,19 @@ struct CloudSearch {
               })
           }.expandSafeArea()
         })
+
+        ListItem() {
+          this.LoadMoreIndicator()
+        }
       }
       .scrollBar(BarState.Off)
       .width('100%')
       .layoutWeight(1)
+      .onReachEnd(() => {
+        if (this.hasMore && !this.isLoadingMore) {
+          this.handleSearch(true)
+        }
+      })
       .expandSafeArea()
     }
   }
@@ -260,5 +360,14 @@ struct CloudSearch {
     }
     .width('100%')
     .height('100%')
+    .expandSafeArea()
+    .bindSheet($$this.showPlayListSelector, this.PlayList(), {
+      showClose: false,
+      detents: [SheetSize.MEDIUM, SheetSize.LARGE],
+      dragBar: false,
+      scrollSizeMode: ScrollSizeMode.CONTINUOUS,
+      backgroundColor: $r('app.color.playlist_bg'),
+      preferType: SheetType.BOTTOM,
+    })
   }
 }

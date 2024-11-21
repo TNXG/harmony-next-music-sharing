@@ -26,6 +26,8 @@ class AVPlayerManager {
   private avSession: avSession.AVSession | null = null;
   private currentPlaybackState: avSession.PlaybackState = avSession.PlaybackState.PLAYBACK_STATE_PAUSE;
   private context: common.UIAbilityContext | undefined;
+
+  private formCached = false // 如果从缓存中打开
   // 初始化所有回调为空数组
   private callbacks: PlayerCallbacks = {
     onPlay: [],
@@ -351,7 +353,7 @@ class AVPlayerManager {
     player.audioRendererInfo = audioRendererInfo;
 
     player.on('audioOutputDeviceChangeWithInfo', async (info: audio.AudioStreamDeviceChangeInfo) => {
-      switch(info.changeReason) {
+      switch (info.changeReason) {
         case audio.AudioStreamDeviceChangeReason.REASON_OLD_DEVICE_UNAVAILABLE:
           // 设备不可用(如蓝牙断开)，需要暂停播放
           await this.pause()
@@ -438,9 +440,15 @@ class AVPlayerManager {
           player.prepare();
           break;
         case 'prepared':
-          player.play();
-          this.currentPlaybackState = avSession.PlaybackState.PLAYBACK_STATE_PLAY;
-          this.updatePlaybackState(avSession.PlaybackState.PLAYBACK_STATE_PLAY);
+          if (!this.formCached) {
+            player.play();
+            this.currentPlaybackState = avSession.PlaybackState.PLAYBACK_STATE_PLAY;
+            this.updatePlaybackState(avSession.PlaybackState.PLAYBACK_STATE_PLAY);
+            this.formCached = false
+          } else {
+            this.currentPlaybackState = avSession.PlaybackState.PLAYBACK_STATE_PAUSE;
+            this.updatePlaybackState(avSession.PlaybackState.PLAYBACK_STATE_PAUSE);
+          }
           const duration = player.duration;
           this.triggerDurationChange(duration);
           break;
@@ -496,8 +504,9 @@ class AVPlayerManager {
     return this.avPlayer;
   }
 
-  async playByPath(path: string, metadata?: avSession.AVMetadata) {
+  async playByPath(path: string, formCached: number, metadata?: avSession.AVMetadata) {
     try {
+      this.formCached = formCached == 1
       const player = await this.getAVPlayerInstance();
       await player.reset();
       // 使用文件描述符播放
@@ -511,7 +520,6 @@ class AVPlayerManager {
       if (metadata && this.avSession) {
         await this.avSession.setAVMetadata(metadata);
       }
-
       await player.prepare();
       await this.play();
     } catch (error) {

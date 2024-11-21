@@ -6,7 +6,6 @@ export struct DailyRecommendCard {
   @State private offsetX: number = 0
   @State private offsetY: number = 0
   private readonly animationDuration: number = 10000
-  private readonly imageSize: number = 200
 
   private readonly randomCover = sample<Resource>(Constant.DEFAULT_COVER)
 
@@ -41,8 +40,8 @@ export struct DailyRecommendCard {
         // 背景图层
         Stack() {
           Image(this.randomCover)
-            .width(this.imageSize)
-            .height(this.imageSize)
+            .width("120%")
+            .height("120%")
             .objectFit(ImageFit.Cover)
             .translate({ x: this.offsetX, y: this.offsetY })
             .blur(1)
@@ -64,7 +63,7 @@ export struct DailyRecommendCard {
       .width(StyleConstants.FULL_WIDTH)
       .height(StyleConstants.FULL_HEIGHT)
     }
-    .width("48%")
+    .width("100%")
     .height(100)
     .clip(true)
     .borderRadius(16)

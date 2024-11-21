@@ -1,75 +1,85 @@
 import { Artist } from "./Toplist";
 
 /**
- * 专辑信息接口
+ * 专辑信息
  */
-export interface Album {
-  /** 歌曲列表 */
-  // songs?: []
-  /** 是否付费 */
-  paid: boolean;
-  /** 是否在售 */
-  onSale: boolean;
-  /** 标记 */
-  mark: number;
-  /** 获奖标签 */
-  awardTags: null;
-  /** 专辑艺术家列表 */
-  artists: Artist[];
-  /** 版权ID */
-  copyrightId: number;
-  /** 图片ID */
-  picId: number;
-  /** 主艺术家信息 */
-  artist: Artist;
-  /** 发布时间 */
-  publishTime: number;
-  /** 发行公司 */
-  company: string;
-  /** 简介 */
-  briefDesc: string;
-  /** 图片URL */
-  picUrl: string;
-  /** 评论线程ID */
-  commentThreadId: string;
-  /** 模糊图片URL */
-  blurPicUrl: string;
-  /** 公司ID */
-  companyId: number;
-  /** 图片 */
-  pic: number;
-  /** 状态 */
-  status: number;
-  /** 专辑类型(录音室版等) */
-  subType: string;
-  /** 描述 */
-  description: string;
-  /** 标签 */
-  tags: string;
-  /** 别名列表 */
-  alias: string[];
-  /** 专辑名称 */
-  name: string;
-  /** 专辑ID */
-  id: number;
-  /** 专辑类型(Single/EP等) */
-  type: string;
-  /** 歌曲数量 */
-  size: number;
-  /** 图片ID字符串 */
-  picId_str: string;
-  /** 翻译名称列表 */
+@Observed
+export class Album {
+  // paid: boolean = false;
+  // onSale: boolean = false;
+  // mark: number = 0;
+  // awardTags: null = null;
+  artists: Artist[] = [];
+  // copyrightId: number = 0;
+  // picId: number = 0;
+  artist: Artist = new Artist();
+  // publishTime: number = 0;
+  // company: string = '';
+  // briefDesc: string = '';
+  picUrl: string = '';
+  // commentThreadId: string = '';
+  // blurPicUrl: string = '';
+  // companyId: number = 0;
+  // pic: number = 0;
+  // status: number = 0;
+  // subType: string = '';
+  description: string = '';
+  tags: string = '';
+  alias: string[] = [];
+  name: string = '';
+  id: number = 0;
+  // type: string = '';
+  // size: number = 0;
+  // picId_str: string = '';
   transNames?: string[];
+
+  constructor(album?: Album) {
+    if (album !== undefined) {
+      // this.paid = album.paid;
+      // this.onSale = album.onSale;
+      // this.mark = album.mark;
+      // this.awardTags = album.awardTags;
+      this.artists = album.artists.map(artist => new Artist(artist));
+      // this.copyrightId = album.copyrightId;
+      // this.picId = album.picId;
+      this.artist = new Artist(album.artist);
+      // this.publishTime = album.publishTime;
+      // this.company = album.company;
+      // this.briefDesc = album.briefDesc;
+      this.picUrl = album.picUrl;
+      // this.commentThreadId = album.commentThreadId;
+      // this.blurPicUrl = album.blurPicUrl;
+      // this.companyId = album.companyId;
+      // this.pic = album.pic;
+      // this.status = album.status;
+      // this.subType = album.subType;
+      this.description = album.description;
+      this.tags = album.tags;
+      this.alias = album.alias;
+      this.name = album.name;
+      this.id = album.id;
+      // this.type = album.type;
+      // this.size = album.size;
+      // this.picId_str = album.picId_str;
+      this.transNames = album.transNames;
+    }
+  }
 }
 
 /**
- * 专辑列表响应接口
+ * 专辑列表响应
  */
-export interface AlbumListResponse {
-  /** 专辑总数 */
-  total: number;
-  /** 专辑列表 */
-  albums: Album[];
-  /** 响应码 */
-  code: number;
+@Observed
+export class AlbumListResponse {
+  total: number = 0;
+  albums: Album[] = [];
+  code: number = 0;
+
+  constructor(response?: AlbumListResponse) {
+    if (response !== undefined) {
+      this.total = response.total;
+      this.albums = response.albums.map(album => new Album(album));
+      this.code = response.code;
+    }
+  }
 }

@@ -1,5 +1,17 @@
 import { TrackAndPrivilege } from "../type/Playlist"
 import { EventBus } from "./EventBus"
+import { PreferencesUtil } from "./PreferenceUtil"
+
+export interface ChangeSong {
+  song: TrackAndPrivilege,
+  pause: number
+}
+
+enum STORAGE_KEYS {
+  PLAY_MODE = 'playlist_play_mode',
+  PLAYLIST = 'playlist_tracks',
+  CURRENT_INDEX = 'current_index'
+}
 
 export interface PlaylistChangeEvent {
   playlist: Array<TrackAndPrivilege>
@@ -21,6 +33,11 @@ export enum PlayMode {
   SINGLE = 'SINGLE'
 }
 
+export enum PlayAction {
+  NEXT = "NEXT",
+  PRE = "PRE"
+}
+
 class GlobalPlaylist {
   private static instance: GlobalPlaylist | null = null
   private playlist: Array<TrackAndPrivilege> = []
@@ -30,7 +47,39 @@ class GlobalPlaylist {
   private _playMode: PlayMode = PlayMode.LOOP
   private randomQueue: number[] = []
 
-  private constructor() {}
+  private lastAction = PlayAction.NEXT
+
+  private constructor() {
+  }
+
+  public async loadPersistedData() {
+    if (!PreferencesUtil.isInitialized()) {
+      return
+    }
+
+    const persistedMode = await PreferencesUtil.getAsync<string>(STORAGE_KEYS.PLAY_MODE, PlayMode.LOOP)
+    this._playMode = persistedMode as PlayMode
+    EventBus.send("PlayModeSet", this._playMode)
+
+    const persistedPlaylist = await PreferencesUtil.getAsync<string>(STORAGE_KEYS.PLAYLIST, '[]')
+    try {
+      this.playlist = JSON.parse(persistedPlaylist)
+    } catch (e) {
+      this.playlist = []
+    }
+
+    this._currentIndex = PreferencesUtil.get<number>(STORAGE_KEYS.CURRENT_INDEX, -1)
+
+    if (this._playMode === PlayMode.RANDOM) {
+      this.generateRandomQueue()
+    }
+
+    if (this.playlist.length > 0) {
+      this.emitPlaylistChange(PlaylistChangeType.OVERWRITE)
+    }
+
+    this.debouncedEmitCurrentChange(this.getCurrentSong(), 1)
+  }
 
   public static getInstance(): GlobalPlaylist {
     if (GlobalPlaylist.instance === null) {
@@ -43,14 +92,17 @@ class GlobalPlaylist {
     return this._playMode
   }
 
-  private debouncedEmitCurrentChange(song: TrackAndPrivilege | undefined): void {
+  private debouncedEmitCurrentChange(song: TrackAndPrivilege | undefined, pause = 0): void {
     if (this.debounceTimer !== null) {
       clearTimeout(this.debounceTimer)
     }
 
     this.debounceTimer = setTimeout(() => {
       if (song !== undefined) {
-        EventBus.send('CurrentChange', song)
+        EventBus.send('CurrentChange', {
+          song,
+          pause
+        } as ChangeSong)
       }
       this.debounceTimer = null
     }, this.DEBOUNCE_DELAY)
@@ -58,10 +110,12 @@ class GlobalPlaylist {
 
   private emitPlaylistChange(type: PlaylistChangeType): void {
     EventBus.send("PlayListChange", type)
+    PreferencesUtil.putAsync(STORAGE_KEYS.PLAYLIST, JSON.stringify(this.playlist))
   }
 
   public setCurrentIndex(value: number): void {
     this._currentIndex = value
+    PreferencesUtil.putAsync(STORAGE_KEYS.CURRENT_INDEX, value)
     this.debouncedEmitCurrentChange(this.getCurrentSong())
   }
 
@@ -76,7 +130,6 @@ class GlobalPlaylist {
       this.randomQueue.push(i)
     }
 
-    // Fisher-Yates 洗牌算法
     for (let i = length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       const temp = this.randomQueue[i]
@@ -142,6 +195,7 @@ class GlobalPlaylist {
 
   public setPlayMode(mode: PlayMode): void {
     this._playMode = mode
+    PreferencesUtil.putAsync(STORAGE_KEYS.PLAY_MODE, mode)
     if (mode === PlayMode.RANDOM) {
       this.generateRandomQueue()
     }
@@ -209,6 +263,8 @@ class GlobalPlaylist {
     this.setCurrentIndex(-1)
     this.randomQueue = []
     this.emitPlaylistChange(PlaylistChangeType.CLEAR)
+    PreferencesUtil.putAsync(STORAGE_KEYS.PLAYLIST, '[]')
+    PreferencesUtil.putAsync(STORAGE_KEYS.CURRENT_INDEX, -1)
   }
 
   public overwrite(songs: Array<TrackAndPrivilege>): void {
@@ -283,6 +339,7 @@ class GlobalPlaylist {
       }
       this.setCurrentIndex(nextIndex)
     }
+    this.lastAction = PlayAction.NEXT
     return this.getCurrentSong()
   }
 
@@ -299,7 +356,12 @@ class GlobalPlaylist {
       }
       this.setCurrentIndex(previousIndex)
     }
+    this.lastAction = PlayAction.PRE
     return this.getCurrentSong()
+  }
+
+  public getLastAction() {
+    return this.lastAction
   }
 
   public setCurrentSongIndex(index: number): TrackAndPrivilege | undefined {
@@ -315,7 +377,9 @@ class GlobalPlaylist {
   }
 
   public insertTop(song: TrackAndPrivilege): void {
-    if (this.isExist(song)) return
+    if (this.isExist(song)) {
+      return
+    }
     this.insertSong(song, 0)
     this.setCurrentSongIndex(0)
   }
@@ -325,6 +389,9 @@ class GlobalPlaylist {
       clearTimeout(this.debounceTimer)
       this.debounceTimer = null
     }
+    PreferencesUtil.putAsync(STORAGE_KEYS.PLAY_MODE, this._playMode)
+    PreferencesUtil.putAsync(STORAGE_KEYS.PLAYLIST, JSON.stringify(this.playlist))
+    PreferencesUtil.putAsync(STORAGE_KEYS.CURRENT_INDEX, this._currentIndex)
   }
 
   public isExist(song: TrackAndPrivilege): boolean {
@@ -357,33 +424,21 @@ class GlobalPlaylist {
     return this.playlist[index]
   }
 
-  /**
-   * 插入到下一首播放或移动已存在的歌曲到下一首位置
-   * @param song 要插入或移动的歌曲
-   * @returns 返回是否成功插入或移动
-   */
   public insertOrMoveNext(song: TrackAndPrivilege): boolean {
     const targetIndex = this.getCurrentIndex() + 1
     const existingIndex = this.findSongIndexById(song.track.id)
 
-    // 如果歌曲已存在
     if (existingIndex !== -1) {
-      // 如果歌曲就在目标位置，不需要移动
       if (existingIndex === targetIndex) {
         return false
       }
 
-      // 如果歌曲在目标位置之后，移动到目标位置
       if (existingIndex > targetIndex) {
         this.moveSong(existingIndex, targetIndex)
-      }
-      // 如果歌曲在目标位置之前，需要考虑移动后的位置偏移
-      else {
+      } else {
         this.moveSong(existingIndex, targetIndex - 1)
       }
-    }
-    // 如果歌曲不存在，直接插入
-    else {
+    } else {
       this.insertSong(song, targetIndex)
     }
 
@@ -392,4 +447,5 @@ class GlobalPlaylist {
 }
 
 const globalPlaylist = GlobalPlaylist.getInstance()
+
 export { globalPlaylist }

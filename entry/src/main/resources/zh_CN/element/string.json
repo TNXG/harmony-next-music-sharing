@@ -27,6 +27,30 @@
     {
       "name": "cached",
       "value": "已缓存"
+    },
+    {
+      "name": "EntryFormAbility_desc",
+      "value": "form_description"
+    },
+    {
+      "name": "EntryFormAbility_label",
+      "value": "form_label"
+    },
+    {
+      "name": "widget_desc",
+      "value": "播放卡片"
+    },
+    {
+      "name": "widget_display_name",
+      "value": "播放卡片"
+    },
+    {
+      "name": "card_title",
+      "value": "音乐播放"
+    },
+    {
+      "name": "introduction",
+      "value": "不是哥们？这都被你发现了？文档有些复杂，我正在抓紧做！"
     }
   ]
 }

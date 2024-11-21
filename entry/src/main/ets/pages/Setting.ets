@@ -84,6 +84,7 @@ struct Settings {
   @State customApiUrl: string = ''
   @State selectedQuality: keyof LevelType = PreferencesUtil.get<keyof LevelType>('defaultLevel') ?? "standard"
   @State autoCache: boolean = PreferencesUtil.get<boolean>("autoCache") ?? false
+  @State forceWebApi: boolean = PreferencesUtil.get<boolean>("forceWebApi") ?? false
 
   dialogController: CustomDialogController = new CustomDialogController({
     builder: UrlInputDialog({
@@ -101,6 +102,52 @@ struct Settings {
     customStyle: true,
     maskColor: $r('app.color.dialog_mask')
   })
+
+  @Builder
+  ForceWebApiSetting() {
+    Column() {
+      Row() {
+        Column() {
+          Row() {
+            Text('强制使用网页端协议')
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_primary'))
+
+            Toggle({ type: ToggleType.Switch, isOn: this.forceWebApi })
+              .onChange((isOn: boolean) => {
+                this.forceWebApi = isOn
+                PreferencesUtil.put('forceWebApi', isOn)
+                promptAction.showToast({
+                  message: isOn ? '已强制网页端协议' : '已关闭强制网页端协议'
+                })
+              })
+              .margin({ left: 8 })
+          }
+          .width('100%')
+          .justifyContent(FlexAlign.SpaceBetween)
+
+          Text('避免官方模式下混用API造成的灰标')
+            .fontSize(14)
+            .fontColor($r('app.color.text_secondary'))
+            .margin({ top: 4 })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+      }
+      .width('100%')
+      .padding(16)
+      .backgroundColor($r('app.color.card_background_two'))
+      .borderRadius(12)
+      .shadow({
+        radius: 12,
+        color: $r('app.color.card_shadow'),
+        offsetX: 0,
+        offsetY: 2
+      })
+    }
+  }
+
 
   @Builder
   AutoCacheSetting() {
@@ -306,6 +353,7 @@ struct Settings {
           this.ApiUrlSetting()
           this.QualitySetting()
           this.AutoCacheSetting()
+          this.ForceWebApiSetting()
         }
         .width('100%')
         .padding(16)

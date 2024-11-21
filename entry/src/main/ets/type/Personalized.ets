@@ -1,64 +1,74 @@
 import { DailySong } from "./Song";
 
 /**
- * 个性化推荐歌单项目接口
+ * 个性化推荐歌单项目
  * 用于描述每个推荐歌单的详细信息
  */
-export interface PersonalizedPlaylist {
-  /** 歌单唯一标识ID */
-  id: number;
-  /**
-   * 歌单类型
-   * 0: 普通歌单
-   */
-  type: number;
-  /** 歌单名称 */
-  name: string;
-  /** 歌单描述文案 */
-  copywriter: string;
-  /** 歌单封面图片URL */
-  picUrl: string;
-  /** 是否可以调整推荐（不喜欢） */
-  canDislike: boolean;
-  /** 歌单内容最后更新时间戳 */
-  trackNumberUpdateTime: number;
-  /** 播放次数 */
-  playCount: number;
-  /** 歌单内音乐数量 */
-  trackCount: number;
-  /** 是否为精品歌单 */
-  highQuality: boolean;
-  /**
-   * 推荐算法类型
-   * 例如：'byNewUserGroup_combine'、'cityLevel_combine' 等
-   */
-  alg: string;
+@Observed
+export class PersonalizedPlaylist {
+  id: number = 0;
+  type: number = 0;
+  name: string = '';
+  copywriter: string = '';
+  picUrl: string = '';
+  canDislike: boolean = false;
+  trackNumberUpdateTime: number = 0;
+  playCount: number = 0;
+  trackCount: number = 0;
+  highQuality: boolean = false;
+  alg: string = '';
+
+  constructor(playlist?: PersonalizedPlaylist) {
+    if (playlist !== undefined) {
+      this.id = playlist.id;
+      this.type = playlist.type;
+      this.name = playlist.name;
+      this.copywriter = playlist.copywriter;
+      this.picUrl = playlist.picUrl;
+      this.canDislike = playlist.canDislike;
+      this.trackNumberUpdateTime = playlist.trackNumberUpdateTime;
+      this.playCount = playlist.playCount;
+      this.trackCount = playlist.trackCount;
+      this.highQuality = playlist.highQuality;
+      this.alg = playlist.alg;
+    }
+  }
 }
 
 /**
- * 个性化推荐接口
+ * 个性化推荐
  * 包含推荐歌单列表及相关配置信息
  */
-export interface Personalized {
-  /** 是否已有个性化推荐的音乐品味 */
-  hasTaste: boolean;
-  /**
-   * 接口状态码
-   * 200: 表示成功
-   */
-  code: number;
-  /**
-   * 推荐类别
-   * 0: 表示歌单推荐
-   */
-  category: number;
-  /** 推荐歌单列表 */
-  result: PersonalizedPlaylist[];
+@Observed
+export class Personalized {
+  hasTaste: boolean = false;
+  code: number = 0;
+  category: number = 0;
+  result: PersonalizedPlaylist[] = [];
+
+  constructor(personalized?: Personalized) {
+    if (personalized !== undefined) {
+      this.hasTaste = personalized.hasTaste;
+      this.code = personalized.code;
+      this.category = personalized.category;
+      this.result = personalized.result.map(playlist => new PersonalizedPlaylist(playlist));
+    }
+  }
 }
 
-export interface FMResponse {
-  popAdjust: boolean;
-  data: Array<DailySong>;
-  tag: string | null;
-  code: number;
+@Observed
+export class FMResponse {
+  popAdjust: boolean = false;
+  data: Array<DailySong> = [];
+  tag: string | null = null;
+  code: number = 0;
+
+  constructor(response?: FMResponse) {
+    if (response !== undefined) {
+      this.popAdjust = response.popAdjust;
+      this.data = response.data.map(song => new DailySong(song));
+      this.tag = response.tag;
+      this.code = response.code;
+    }
+  }
 }

@@ -69,9 +69,7 @@ struct Index {
             .width('100%')
             .layoutWeight(1)
 
-            if (this.track) {
-              PlaybackControlBar()
-            }
+            PlaybackControlBar()
           }
           .width('100%')
           .height('100%')
@@ -86,9 +84,7 @@ struct Index {
             .width('100%')
             .layoutWeight(1)
 
-            if (this.track) {
-              PlaybackControlBar()
-            }
+            PlaybackControlBar()
           }
           .width('100%')
           .height('100%')
@@ -103,9 +99,7 @@ struct Index {
             .width('100%')
             .layoutWeight(1)
 
-            if (this.track) {
-              PlaybackControlBar()
-            }
+            PlaybackControlBar()
           }
           .width('100%')
           .height('100%')

@@ -1,5 +1,6 @@
 import { StyleConstants } from "../common/Constant"
 
+@Reusable
 @Component
 export struct PlaylistCard {
   @Prop count: number

@@ -115,7 +115,7 @@ export struct Library {
                     url: "pages/Collection",
                   })
                 })
-              }, (item: Playlist) => `playlist-${item.id}}`)
+              })
             }
             .width('100%')
             .columnsTemplate(`repeat(1, 1fr)`)

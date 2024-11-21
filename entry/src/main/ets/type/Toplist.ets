@@ -1,207 +1,226 @@
-/**
- * 歌手排行榜相关资源信息
- */
-export interface RelatedResource {
-  /** 资源图标 */
+@Observed
+export class RelatedResource {
   icon?: string;
-  /** 资源标题 */
   title?: string;
-  /** 资源副标题 */
   subTitle?: string;
-  /** 资源链接 */
   url?: string;
-  /** 资源ID */
   resId?: string;
-  /** 资源类型 */
   resType?: string;
+
+  constructor(resource?: RelatedResource) {
+    if (resource !== undefined) {
+      this.icon = resource.icon;
+      this.title = resource.title;
+      this.subTitle = resource.subTitle;
+      this.url = resource.url;
+      this.resId = resource.resId;
+      this.resType = resource.resType;
+    }
+  }
 }
 
-/**
- * 歌手信息
- */
-export interface Artist {
-  /** 歌手姓名 */
-  name: string;
-  /** 歌手ID */
-  id: number;
-  /** 歌手图片ID */
-  picId: number;
-  /** 1v1图片ID */
-  img1v1Id: number;
-  /** 歌手简介 */
-  briefDesc: string;
-  /** 歌手图片URL */
-  picUrl: string;
-  /** 1v1图片URL */
-  img1v1Url: string;
-  /** 专辑数量 */
-  albumSize: number;
-  /** 歌手别名 */
-  alias: string[];
-  /** 歌手翻译名 */
-  trans: string;
-  /** 音乐数量 */
-  musicSize: number;
-  /** 话题人数 */
-  topicPerson: number;
-  /** 上次排名 */
-  lastRank: number;
-  /** 得分 */
-  score: number;
-  /** 图片ID字符串 */
-  picId_str?: string;
-  /** 1v1图片ID字符串 */
-  img1v1Id_str?: string;
-  /** 翻译名数组 */
-  transNames?: string[];
-  /** 相关资源 */
-  relatedRes: RelatedResource | null;
+@Observed
+export class Artist {
+  name: string = '';
+  id: number = 0;
+  // picId: number = 0;
+  // img1v1Id: number = 0;
+  // briefDesc: string = '';
+  picUrl: string = '';
+  // img1v1Url: string = '';
+  // albumSize: number = 0;
+  // alias: string[] = [];
+  // trans: string = '';
+  // musicSize: number = 0;
+  // topicPerson: number = 0;
+  // lastRank: number = 0;
+  // score: number = 0;
+  // picId_str?: string;
+  // img1v1Id_str?: string;
+  // transNames?: string[];
+  // relatedRes: RelatedResource | null = null;
+
+  constructor(artist?: Artist) {
+    if (artist !== undefined) {
+      this.name = artist.name;
+      this.id = artist.id;
+      // this.picId = artist.picId;
+      // this.img1v1Id = artist.img1v1Id;
+      // this.briefDesc = artist.briefDesc;
+      this.picUrl = artist.picUrl;
+      // this.img1v1Url = artist.img1v1Url;
+      // this.albumSize = artist.albumSize;
+      // this.alias = artist.alias;
+      // this.trans = artist.trans;
+      // this.musicSize = artist.musicSize;
+      // this.topicPerson = artist.topicPerson;
+      // this.lastRank = artist.lastRank;
+      // this.score = artist.score;
+      // this.picId_str = artist.picId_str;
+      // this.img1v1Id_str = artist.img1v1Id_str;
+      // this.transNames = artist.transNames;
+      // this.relatedRes = artist.relatedRes ? new RelatedResource(artist.relatedRes) : null;
+    }
+  }
 }
 
-/**
- * 歌手列表信息
- */
-export interface ArtistList {
-  /** 歌手数组 */
-  artists: Artist[];
-  /** 更新时间 */
-  updateTime: number;
-  /** 类型 */
-  type: number;
+@Observed
+export class ArtistList {
+  artists: Artist[] = [];
+  updateTime: number = 0;
+  type: number = 0;
+
+  constructor(list?: ArtistList) {
+    if (list !== undefined) {
+      this.artists = list.artists.map(artist => new Artist(artist));
+      this.updateTime = list.updateTime;
+      this.type = list.type;
+    }
+  }
 }
 
-/**
- * 歌手排行榜接口响应
- */
-export interface ArtistRankResponse {
-  /** 返回码 */
-  code: number;
-  /** 歌手列表信息 */
-  list: ArtistList;
+@Observed
+export class ArtistRankResponse {
+  code: number = 0;
+  list: ArtistList = new ArtistList();
+
+  constructor(response?: ArtistRankResponse) {
+    if (response !== undefined) {
+      this.code = response.code;
+      this.list = new ArtistList(response.list);
+    }
+  }
 }
 
-/**
- * 榜单详情信息
- */
-export interface Playlist {
-  // /** 订阅者 */
-  // subscribers: any[];
-  /** 是否订阅 */
-  subscribed: boolean | null;
-  /** 创建者 */
-  creator: null;
-  /** 歌手列表 */
-  artists: null;
-  /** 歌曲列表 */
-  tracks: null;
-  /** 更新频率 */
-  updateFrequency: string;
-  /** 背景封面ID */
-  backgroundCoverId: number;
-  /** 背景封面URL */
-  backgroundCoverUrl: string | null;
-  /** 标题图片 */
-  titleImage: number;
-  /** 封面文字 */
-  coverText: string | null;
-  /** 标题图片URL */
-  titleImageUrl: string | null;
-  /** 封面图片URL */
-  coverImageUrl: string | null;
-  /** 图标图片URL */
-  iconImageUrl: string | null;
-  /** 英文标题 */
-  englishTitle: string | null;
-  /** 官方推荐 */
-  opRecommend: boolean;
-  /** 推荐信息 */
-  recommendInfo: null;
-  /** 社交歌单封面 */
-  socialPlaylistCover: null;
-  /** 歌曲数量 */
-  tsSongCount: number;
-  /** 算法类型 */
-  algType: null;
-  /** 是否精品 */
-  highQuality: boolean;
-  /** 特殊类型 */
-  specialType: number;
-  /** 封面图片ID */
-  coverImgId: number;
-  /** 是否新导入 */
-  newImported: boolean;
-  /** 是否匿名 */
-  anonimous: boolean;
-  /** 更新时间 */
-  updateTime: number;
-  /** 歌曲数量 */
-  trackCount: number;
-  /** 评论线程ID */
-  commentThreadId: string;
-  /** 歌曲更新时间 */
-  trackUpdateTime: number;
-  /** 封面图片URL */
-  coverImgUrl: string;
-  /** 总时长 */
-  totalDuration: number;
-  /** 播放次数 */
-  playCount: number;
-  /** 歌曲数量更新时间 */
-  trackNumberUpdateTime: number;
-  /** 隐私设置 */
-  privacy: number;
-  /** 广告类型 */
-  adType: number;
-  /** 订阅数量 */
-  subscribedCount: number;
-  /** 云盘歌曲数量 */
-  cloudTrackCount: number;
-  /** 创建时间 */
-  createTime: number;
-  /** 是否有序 */
-  ordered: boolean;
-  /** 描述 */
-  description: string | null;
-  /** 状态 */
-  status: number;
-  /** 标签 */
-  tags: string[];
-  /** 用户ID */
-  userId: number;
-  /** 榜单名称 */
-  name: string;
-  /** 榜单ID */
-  id: number;
-  /** 封面图片ID字符串 */
-  coverImgId_str?: string;
-  /** 榜单类型 */
-  ToplistType?: string;
+@Observed
+export class Playlist {
+  // subscribed: boolean | null = null;
+  // creator: null = null;
+  // artists: null = null;
+  // tracks: null = null;
+  updateFrequency: string = '';
+  // backgroundCoverId: number = 0;
+  // backgroundCoverUrl: string | null = null;
+  // titleImage: number = 0;
+  // coverText: string | null = null;
+  // titleImageUrl: string | null = null;
+  coverImageUrl: string | null = null;
+  // iconImageUrl: string | null = null;
+  // englishTitle: string | null = null;
+  // opRecommend: boolean = false;
+  // recommendInfo: null = null;
+  // socialPlaylistCover: null = null;
+  // tsSongCount: number = 0;
+  // algType: null = null;
+  // highQuality: boolean = false;
+  // specialType: number = 0;
+  // coverImgId: number = 0;
+  // newImported: boolean = false;
+  // anonimous: boolean = false;
+  // updateTime: number = 0;
+  // trackCount: number = 0;
+  // commentThreadId: string = '';
+  // trackUpdateTime: number = 0;
+  coverImgUrl: string = '';
+  // totalDuration: number = 0;
+  // playCount: number = 0;
+  // trackNumberUpdateTime: number = 0;
+  // privacy: number = 0;
+  // adType: number = 0;
+  // subscribedCount: number = 0;
+  // cloudTrackCount: number = 0;
+  // createTime: number = 0;
+  // ordered: boolean = false;
+  // description: string | null = null;
+  // status: number = 0;
+  // tags: string[] = [];
+  // userId: number = 0;
+  name: string = '';
+  id: number = 0;
+  // coverImgId_str?: string;
+  // ToplistType?: string;
+
+  constructor(playlist?: Playlist) {
+    if (playlist !== undefined) {
+      // this.subscribed = playlist.subscribed;
+      // this.creator = playlist.creator;
+      // this.artists = playlist.artists;
+      // this.tracks = playlist.tracks;
+      this.updateFrequency = playlist.updateFrequency;
+      // this.backgroundCoverId = playlist.backgroundCoverId;
+      // this.backgroundCoverUrl = playlist.backgroundCoverUrl;
+      // this.titleImage = playlist.titleImage;
+      // this.coverText = playlist.coverText;
+      // this.titleImageUrl = playlist.titleImageUrl;
+      this.coverImageUrl = playlist.coverImageUrl;
+      // this.iconImageUrl = playlist.iconImageUrl;
+      // this.englishTitle = playlist.englishTitle;
+      // this.opRecommend = playlist.opRecommend;
+      // this.recommendInfo = playlist.recommendInfo;
+      // this.socialPlaylistCover = playlist.socialPlaylistCover;
+      // this.tsSongCount = playlist.tsSongCount;
+      // this.algType = playlist.algType;
+      // this.highQuality = playlist.highQuality;
+      // this.specialType = playlist.specialType;
+      // this.coverImgId = playlist.coverImgId;
+      // this.newImported = playlist.newImported;
+      // this.anonimous = playlist.anonimous;
+      // this.updateTime = playlist.updateTime;
+      // this.trackCount = playlist.trackCount;
+      // this.commentThreadId = playlist.commentThreadId;
+      // this.trackUpdateTime = playlist.trackUpdateTime;
+      this.coverImgUrl = playlist.coverImgUrl;
+      // this.totalDuration = playlist.totalDuration;
+      // this.playCount = playlist.playCount;
+      // this.trackNumberUpdateTime = playlist.trackNumberUpdateTime;
+      // this.privacy = playlist.privacy;
+      // this.adType = playlist.adType;
+      // this.subscribedCount = playlist.subscribedCount;
+      // this.cloudTrackCount = playlist.cloudTrackCount;
+      // this.createTime = playlist.createTime;
+      // this.ordered = playlist.ordered;
+      // this.description = playlist.description;
+      // this.status = playlist.status;
+      // this.tags = playlist.tags;
+      // this.userId = playlist.userId;
+      this.name = playlist.name;
+      this.id = playlist.id;
+      // this.coverImgId_str = playlist.coverImgId_str;
+      // this.ToplistType = playlist.ToplistType;
+    }
+  }
 }
 
-/**
- * 歌手榜单信息
- */
-export interface ArtistToplist {
-  /** 封面URL */
-  coverUrl: string;
-  /** 榜单名称 */
-  name: string;
-  /** 更新频率 */
-  updateFrequency: string;
-  /** 位置 */
-  position: number;
-  /** 更新频率（遗留字段） */
-  upateFrequency: string;
+@Observed
+export class ArtistToplist {
+  coverUrl: string = '';
+  name: string = '';
+  updateFrequency: string = '';
+  position: number = 0;
+  upateFrequency: string = '';
+
+  constructor(toplist?: ArtistToplist) {
+    if (toplist !== undefined) {
+      this.coverUrl = toplist.coverUrl;
+      this.name = toplist.name;
+      this.updateFrequency = toplist.updateFrequency;
+      this.position = toplist.position;
+      this.upateFrequency = toplist.upateFrequency;
+    }
+  }
 }
 
-/**
- * 榜单列表响应接口
- */
-export interface ToplistResponse {
-  /** 响应码 */
-  code: number;
-  /** 榜单列表 */
-  list: Playlist[];
-  /** 歌手榜单信息 */
-  artistToplist: ArtistToplist;
+@Observed
+export class ToplistResponse {
+  code: number = 0;
+  list: Playlist[] = [];
+  artistToplist: ArtistToplist = new ArtistToplist();
+
+  constructor(response?: ToplistResponse) {
+    if (response !== undefined) {
+      this.code = response.code;
+      this.list = response.list.map(playlist => new Playlist(playlist));
+      this.artistToplist = new ArtistToplist(response.artistToplist);
+    }
+  }
 }

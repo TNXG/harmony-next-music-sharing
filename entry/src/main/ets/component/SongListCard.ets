@@ -1,6 +1,7 @@
 import { StyleConstants } from "../common/Constant"
 import { Artist } from "../type/Toplist"
 
+@Reusable
 @Component
 export struct SongListCard {
   @Prop title: string

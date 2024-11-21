@@ -1,4 +1,4 @@
-import axios, { AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosHeaders } from "@ohos/axios";
+import axios, { AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosInstance, AxiosHeaders } from "@ohos/axios";
 import Logger from './Logger';
 import Constant from './Constant';
 import { PreferencesUtil } from './PreferenceUtil';
@@ -73,11 +73,21 @@ const requestInterceptors: RequestInterceptors = {
   },
 
   addCrypto: (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
+    // weapi url 列表
+    const weapiUrls = [
+      '/playlist/subscribe',
+      '/playlist/create'
+    ];
+
     if (config.method?.toUpperCase() === 'POST') {
       if (!config.data) {
         config.data = {};
       }
-      if (typeof config.data === 'object') {
+      if ((config.url && weapiUrls.some((url) => config.url?.includes(url))) || PreferencesUtil.get<boolean>("forceWebApi")) {
+        Logger.info('RequestUtil', `Crypto Using weapi`);
+        config.data.crypto = "weapi"
+      } else if (typeof config.data === 'object') {
+        Logger.info('RequestUtil', `Crypto Using eapi`);
         config.data.crypto = "eapi";
       }
     }
@@ -106,7 +116,7 @@ const requestInterceptors: RequestInterceptors = {
   handleError: (error: AxiosError): Promise<AxiosError> => {
     Logger.error(TAG, error.message);
     return Promise.reject(error);
-  }
+  },
 };
 
 // 响应拦截器
@@ -122,10 +132,12 @@ const responseInterceptors: ResponseInterceptors = {
   }
 };
 
-// 创建请求实例
-const createAxiosInstance = (isAnonymous = false) => {
+// 创建请求实例的函数
+const createAxiosInstance = (isAnonymous = false): AxiosInstance => {
+  Logger.info('RequestUtil', `CustomURL Using ${PreferencesUtil.get<string>('customURL')}`);
+  const baseUrl =  PreferencesUtil.get<string>('customURL') || Constant.BASE_URL
   const instance = axios.create({
-    baseURL: PreferencesUtil.get<string>('customURL') || Constant.BASE_URL,
+    baseURL: baseUrl,
     timeout: Constant.DEFAULT_TIMEOUT,
   });
 
@@ -149,17 +161,52 @@ const createAxiosInstance = (isAnonymous = false) => {
   return instance;
 };
 
-// 创建实例
-const request = createAxiosInstance();
-const anonymous = createAxiosInstance(true);
+// 请求工具类
+// 请求工具类
+export class RequestUtil {
+  private static instance: RequestUtil;
+  private _request?: AxiosInstance;
+  private _anonymous?: AxiosInstance;
 
-// 添加更新baseURL的方法
-export const updateBaseURL = (url?: string) => {
-  const baseURL = url || Constant.BASE_URL;
-  request.defaults.baseURL = baseURL;
-  anonymous.defaults.baseURL = baseURL;
-  Logger.info('RequestUtil', `BaseURL updated to: ${baseURL}`);
-};
+  private constructor() {}
 
-export { request, anonymous };
-export default request;
+  static getInstance(): RequestUtil {
+    if (!RequestUtil.instance) {
+      RequestUtil.instance = new RequestUtil();
+    }
+    return RequestUtil.instance;
+  }
+
+  getRequest(): AxiosInstance {
+    if (!this._request) {
+      this._request = createAxiosInstance();
+    }
+    return this._request;
+  }
+
+  getAnonymous(): AxiosInstance {
+    if (!this._anonymous) {
+      this._anonymous = createAxiosInstance(true);
+    }
+    return this._anonymous;
+  }
+
+  updateBaseURL(url?: string): void {
+    const baseURL = url || Constant.BASE_URL;
+    if (this._request) {
+      this._request.defaults.baseURL = baseURL;
+    }
+    if (this._anonymous) {
+      this._anonymous.defaults.baseURL = baseURL;
+    }
+    Logger.info(TAG, `BaseURL updated to: ${baseURL}`);
+  }
+}
+
+// 导出获取实例的方法而不是实例本身
+export const getRequest = (): AxiosInstance => RequestUtil.getInstance().getRequest();
+export const getAnonymous = (): AxiosInstance => RequestUtil.getInstance().getAnonymous();
+export const updateBaseURL = (url?: string): void => RequestUtil.getInstance().updateBaseURL(url);
+
+// 默认导出 getter 函数
+export default getRequest;

@@ -154,17 +154,16 @@ struct PersonalFm {
         if (this.dailySong) {
           const tempSongs: TrackAndPrivilege[] = []
           this.dailySong.forEach((song) => {
-            tempSongs.push({
-              track: song as ESObject as Track,
-              privilege: song.privilege as ESObject as Privilege
-            })
+            const track = new TrackAndPrivilege()
+            track.track = song as ESObject as Track
+            track.privilege = song.privilege as ESObject as Privilege
+            tempSongs.push(track)
           })
           globalPlaylist.overwrite(tempSongs)
           // 加载第一首歌
-          const info: TrackAndPrivilege = {
-            track: this.dailySong[0] as ESObject as Track,
-            privilege: this.dailySong[0].privilege as ESObject as Privilege
-          }
+          const info = new TrackAndPrivilege()
+          info.track =this.dailySong[0] as ESObject as Track
+          info.privilege = this.dailySong[0].privilege as ESObject as Privilege
           AppStorage.setOrCreate("Track", info)
           router.pushUrl({
             url: "pages/Playing",
@@ -192,11 +191,10 @@ struct PersonalFm {
       {
         value: '添加到下一首',
         action: () => {
-          const trackAndPrivilege: TrackAndPrivilege = {
-            track: track as ESObject as Track,
-            privilege: track.privilege as ESObject as Privilege
-          }
-          globalPlaylist.insertOrMoveNext(trackAndPrivilege)
+          const song = new TrackAndPrivilege()
+          song.track = track as ESObject as Track
+          song.privilege = track.privilege as ESObject as Privilege
+          globalPlaylist.insertOrMoveNext(song)
         }
       },
     ])
@@ -230,17 +228,16 @@ struct PersonalFm {
         })
         .onClick(() => {
           if (track.privilege && track.privilege.st >= 0) {
-            const info: TrackAndPrivilege = {
-              track: track as ESObject as Track,
-              privilege: track.privilege as ESObject as Privilege
-            }
+            const info = new TrackAndPrivilege()
+            info.track = track as ESObject as Track
+            info.privilege = track.privilege as ESObject as Privilege
             // 添加播放列表
             const tempSongs: TrackAndPrivilege[] = []
             this.dailySong?.forEach((song) => {
-              tempSongs.push({
-                track: song as ESObject as Track,
-                privilege: song.privilege as ESObject as Privilege
-              })
+              const info = new TrackAndPrivilege()
+              info.track = song as ESObject as Track
+              info.privilege = song.privilege as ESObject as Privilege
+              tempSongs.push(info)
             })
             globalPlaylist.overwrite(tempSongs)
             globalPlaylist.setCurrentIndex(index)

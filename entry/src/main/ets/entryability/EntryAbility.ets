@@ -15,7 +15,7 @@ import { EventBus } from '../common/EventBus';
 import { avPlayerManager } from '../common/AVPlayerManager';
 import { downloadManager } from '../common/DownloadUtils';
 import { TrackAndPrivilege } from '../type/Playlist';
-import { globalPlaylist, PlayMode } from '../common/GlobalPlayListManager';
+import { ChangeSong, globalPlaylist, PlayAction, PlayMode } from '../common/GlobalPlayListManager';
 import { cacheManager } from '../common/CacheManager';
 import { cover, getSupportedQuality, QualityLevel } from '../common/APIHelper';
 import { checkIfLoved, getRecommendSongs, getSongLyric, getSongUrl, likeSong } from '../api/Song';
@@ -23,6 +23,7 @@ import { util } from '@kit.ArkTS';
 import { avSession } from '@kit.AVSessionKit';
 import { backgroundRunningManager } from '../common/BackgroundRunningManager';
 import { audioFileSaver } from '../common/AudioFileSaver';
+import { SongCache } from '../type/Song';
 
 // 发现页数据加载
 async function lookup() {
@@ -42,11 +43,11 @@ async function lookup() {
 
     const recommendSongsRes = results[4];
 
-    AppStorage.setOrCreate('DailySong', recommendSongsRes.data.dailySongs);
     AppStorage.setOrCreate('PersonalizedPlaylist', personalizedRes.result);
     AppStorage.setOrCreate('ToplistArtistList', topArtistRes.list.artists);
     AppStorage.setOrCreate('NewAlbumList', newAlbumRes.albums);
     AppStorage.setOrCreate('TopListAlbumList', topAlbumRes.list);
+    AppStorage.setOrCreate('DailySong', recommendSongsRes.data.dailySongs);
   } catch (error) {
     Logger.warn("Init", error.message)
   }
@@ -91,7 +92,7 @@ async function cacheNextSong() {
 
     currentCachingId = nextTrack.track.id;
 
-    const url = (await getSongUrl(nextTrack.track.id)).data[0].url
+    const url = (await getSongUrl(nextTrack.track.id)).data.url
     if (!url) return
 
     let fileName = url.split("/").pop() ?? `${util.generateRandomUUID()}`
@@ -106,14 +107,15 @@ async function cacheNextSong() {
     })
 
     if (path) {
-      cacheManager.set(`${nextTrack.track.id}_${confirmLevel}`, {
-        id: nextTrack.track.id,
-        level: confirmLevel,
-        name: nextTrack.track.name,
-        path,
-        coverImgUrl: nextTrack.track.al.picUrl,
-        artist: nextTrack.track.ar.map(item => item.name)
-      })
+      const cache = new SongCache()
+      cache.id = nextTrack.track.id
+      cache.level = confirmLevel
+      cache.name = nextTrack.track.name
+      cache.path = path
+      cache.coverImgUrl = nextTrack.track.al.picUrl
+      cache.artist = nextTrack.track.ar.map(item => item.name)
+
+      cacheManager.set(`${nextTrack.track.id}_${confirmLevel}`, cache)
     }
     currentCachingId = null;
   } catch (e) {
@@ -122,7 +124,8 @@ async function cacheNextSong() {
   }
 }
 
-async function startPlaySong(track: TrackAndPrivilege) {
+async function startPlaySong(song: ChangeSong) {
+  const track = song.song
   try {
     // 如果当前正在缓存这首歌，等待缓存完成
     if (currentCachingId === track.track.id) {
@@ -146,7 +149,7 @@ async function startPlaySong(track: TrackAndPrivilege) {
     EventBus.send("LyricsUpdated")
 
     if (cache) {
-      avPlayerManager.playByPath(cache.path)
+      await avPlayerManager.playByPath(cache.path, song.pause)
       avPlayerManager.clearListener('onDurationChange')
       avPlayerManager.addListener('onDurationChange', async (duration: number) => {
         await avPlayerManager.updateAVMetadata({
@@ -162,17 +165,21 @@ async function startPlaySong(track: TrackAndPrivilege) {
           cacheNextSong()
         }
       })
-      await backgroundRunningManager.stopBackgroundRunning();
-      await backgroundRunningManager.startBackgroundRunning();
+      // await backgroundRunningManager.stopBackgroundRunning();
+      // await backgroundRunningManager.startBackgroundRunning();
     } else {
       if (track.privilege.st < 0) {
-        globalPlaylist.playNext()
+       if (globalPlaylist.getLastAction() == PlayAction.NEXT) {
+         globalPlaylist.playNext()
+       } else {
+         globalPlaylist.playPrevious()
+       }
         return
       }
 
       // 直接下载当前歌曲
       currentCachingId = track.track.id;
-      const url = (await getSongUrl(track.track.id)).data[0].url
+      const url = (await getSongUrl(track.track.id)).data.url
       let fileName = url.split("/").pop() ?? `${util.generateRandomUUID()}`
       const index = fileName.indexOf("?")
       if (index > 0) {
@@ -186,7 +193,7 @@ async function startPlaySong(track: TrackAndPrivilege) {
       currentCachingId = null;
 
       if (path) {
-        avPlayerManager.playByPath(path)
+        await avPlayerManager.playByPath(path,song.pause)
         avPlayerManager.clearListener('onDurationChange')
         avPlayerManager.addListener('onDurationChange', async (duration: number) => {
           await avPlayerManager.updateAVMetadata({
@@ -202,16 +209,17 @@ async function startPlaySong(track: TrackAndPrivilege) {
             cacheNextSong()
           }
         })
-        await backgroundRunningManager.stopBackgroundRunning();
-        await backgroundRunningManager.startBackgroundRunning();
-        cacheManager.set(`${track.track.id}_${confirmLevel}`, {
-          id: track.track.id,
-          level: confirmLevel,
-          name: track.track.name,
-          path,
-          coverImgUrl: track.track.al.picUrl,
-          artist: track.track.ar.map(item => item.name)
-        })
+        // await backgroundRunningManager.stopBackgroundRunning();
+        // await backgroundRunningManager.startBackgroundRunning();
+        const cache = new SongCache()
+        cache.id = track.track.id
+        cache.level = confirmLevel
+        cache.name = track.track.name
+        cache.path = path
+        cache.coverImgUrl = track.track.al.picUrl
+        cache.artist = track.track.ar.map(item => item.name)
+
+        cacheManager.set(`${track.track.id}_${confirmLevel}`, cache)
       } else {
         promptAction.showToast({
           message: "音乐资源获取失败!"
@@ -230,6 +238,7 @@ async function startPlaySong(track: TrackAndPrivilege) {
     AppStorage.setOrCreate("TrackLike", isLike)
 
   } catch (e) {
+    Logger.warn("RequestUtil", e.message)
     promptAction.showToast({
       message: "音乐资源获取失败!"
     })
@@ -261,6 +270,14 @@ export default class EntryAbility extends UIAbility {
     audioFileSaver.init(this.context)
     await avPlayerManager.init(this.context);
 
+    avPlayerManager.addListener("onPlay", async ()=>{
+      await backgroundRunningManager.startBackgroundRunning();
+    })
+
+    avPlayerManager.addListener("onPause", async ()=>{
+      await backgroundRunningManager.startBackgroundRunning();
+    })
+
     let lastTrack: TrackAndPrivilege | null = null;
 
     cacheManager.initialize(this.context, {
@@ -280,17 +297,17 @@ export default class EntryAbility extends UIAbility {
       }
     })
 
-    EventBus.listen<TrackAndPrivilege>('CurrentChange', async (data) => {
-      if (data !== undefined) {
+    EventBus.listen<ChangeSong>('CurrentChange', async (changed) => {
+      if (changed !== undefined) {
+        const data = changed.song
         // 如果歌曲id并且不是单曲循环模式，则不重复播放
         if (lastTrack && lastTrack.track.id === data.track.id && globalPlaylist.playMode !== PlayMode.SINGLE) {
           return
         }
         lastTrack = data
         await avPlayerManager.stop()
-        startPlaySong(data).then(() => {
+        startPlaySong(changed).then(() => {
           avPlayerManager.updatePlaybackState()
-          EventBus.send("SongStartPlay")
         })
       }
     })
@@ -334,6 +351,8 @@ export default class EntryAbility extends UIAbility {
         })
       }
     })
+
+    await globalPlaylist.loadPersistedData()
   }
 
   onDestroy(): void {
@@ -369,8 +388,9 @@ export default class EntryAbility extends UIAbility {
       // 获取用户登录信息
       getAuth()
 
-      // 初始化数据
       lookup()
+
+      library()
     });
 
   }

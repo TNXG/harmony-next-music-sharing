@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "storePassword": "0000001952152C588C463DA56B4494B159CDD806BD243CD2F5C7A8593EC50485C4F531A49758B8CA40",
-          "certpath": "C:/Users/10423/Key/云享社.cer",
-          "keyAlias": "SeaMusic",
-          "keyPassword": "0000001935B8E27532F02D96A94E7F4AC01D943227A2487F2A253630F849657288914AA5B3A95F3345",
-          "profile": "C:/Users/10423/Key/云享社Release.p7b",
+          "certpath": "C:\\Users\\10423\\.ohos\\config\\default_SeaMusic_4E5a3VgWcCAjzlepMmUvDGFbXusIefmBHDibPyBFJCU=.cer",
+          "storePassword": "0000001B98F004F93558F415F052E03E544F8FBA93FC458DB60304A2C8C080B3FF6FB3C0B2074E06A63FAA",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B8703A16E522F8CBE9D5D284FEF1D4B556017713E75E2DDECF37CB6C19B3F99951DA0122793D2F1",
+          "profile": "C:\\Users\\10423\\.ohos\\config\\default_SeaMusic_4E5a3VgWcCAjzlepMmUvDGFbXusIefmBHDibPyBFJCU=.p7b",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "C:/Users/10423/Key/SeaMusic.p12"
+          "storeFile": "C:\\Users\\10423\\.ohos\\config\\default_SeaMusic_4E5a3VgWcCAjzlepMmUvDGFbXusIefmBHDibPyBFJCU=.p12"
         }
       }
     ],

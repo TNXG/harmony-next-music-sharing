@@ -58,7 +58,10 @@ export struct LyricView {
         const time = minutes * 60 * 1000 + seconds * 1000 + (ms < 100 ? ms * 10 : ms)
         const text = line.replace(timeRegex, '').trim()
         if (text) {
-          lyrics.push({ time, text })
+          const line = new LyricLine()
+          line.time = time
+          line.text = text
+          lyrics.push(line)
         }
       }
     })

@@ -1,5 +1,5 @@
 import { BreakPointType } from "../common/BreakpointSystem"
-import { BreakpointConstants, StyleConstants } from "../common/Constant"
+import { BreakpointConstants } from "../common/Constant"
 import { TrackAndPrivilege } from '../type/Playlist'
 import { globalPlaylist, PlayMode } from '../common/GlobalPlayListManager'
 import { cover } from '../common/APIHelper'
@@ -7,6 +7,9 @@ import { avPlayerManager } from '../common/AVPlayerManager'
 import { EventBus } from '../common/EventBus'
 import { PlayList } from '../component/PlayList'
 import { LyricView } from '../component/LyricDisplay'
+import { PlaylistSelector } from '../component/PlaylistSelector'
+import { collectSong } from '../api/Song'
+import { promptAction } from '@kit.ArkUI'
 
 @Entry
 @Component
@@ -26,6 +29,25 @@ struct Playing {
   @State appearItems: number[] = []
   @State isLoading: boolean = false
   @State loadAll: boolean = false
+  @State selector: boolean = false
+
+  @Builder
+  PlayList() {
+    Column() {
+      PlaylistSelector({
+        onSelect: async (id: string | number) => {
+          await collectSong(id, [this.track?.track.id!])
+          promptAction.showToast({ message: "已添加到收藏夹" })
+          this.showPlaylist = false;
+          this.selector = false;
+        }
+      })
+    }
+    .expandSafeArea()
+    .height("100%")
+    .backgroundColor($r('app.color.playlist_bg'))
+    .layoutWeight(1)
+  }
 
   @Builder
   PlayListBuilder() {
@@ -172,7 +194,7 @@ struct Playing {
   private coverWidth = new BreakPointType({
     sm: '85%',
     md: '75%',
-    lg: '45%'
+    lg: '30%'
   })
   private buttonSize = new BreakPointType({
     sm: 48,
@@ -265,6 +287,21 @@ struct Playing {
       })
 
       Button({ type: ButtonType.Circle }) {
+        Image($r('app.media.ic_star'))
+          .width(28)
+          .height(28)
+          .fillColor(Color.White)
+      }
+      .width(44)
+      .height(44)
+      .margin(8)
+      .backgroundColor('rgba(255, 255, 255, 0.1)')
+      .onClick(() => {
+        this.selector = true;
+        this.showPlaylist = true;
+      })
+
+      Button({ type: ButtonType.Circle }) {
         Image($r('app.media.ic_list'))
           .width(28)
           .height(28)
@@ -275,8 +312,8 @@ struct Playing {
       .margin(8)
       .backgroundColor('rgba(255, 255, 255, 0.1)')
       .onClick(() => {
+        this.selector = false;
         this.showPlaylist = true;
-        //promptAction.showToast({ message: "存在性能问题，暂时禁用" })
       })
     }
     .margin({ top: 16 })
@@ -312,18 +349,18 @@ struct Playing {
                 .aspectRatio(1)
                 .borderRadius(24)
                 .margin({ top: 48 })
-                .shadow({ radius: 24, color: $r('app.color.shadow_color'), offsetY: 12 })
+                .shadow({ radius: 24, color: 'rgba(0, 0, 0, 0.2)', offsetY: 12 })
 
               Text(this.track?.track.name)
                 .fontSize(this.getFontSize(this.track?.track.name ?? "", 28, 24))
                 .fontWeight(FontWeight.Bold)
                 .maxLines(1)
                 .margin({ top: 24 })
-                .fontColor($r('app.color.text_primary'))
+                .fontColor(Color.White)
 
               Text(this.track?.track.ar.map(item => item.name).join(" / "))
                 .fontSize(16)
-                .fontColor($r('app.color.text_secondary'))
+                .fontColor('rgba(255, 255, 255, 0.6)')
                 .margin({ top: 8 })
 
               Column() {
@@ -331,7 +368,7 @@ struct Playing {
                 this.ProgressBar()
                 this.PlayerControls()
               }
-              .margin({ top: 24 })
+              .margin({ top: 8 })
               .layoutWeight(1)
               .justifyContent(FlexAlign.End)
             }
@@ -405,12 +442,17 @@ struct Playing {
     .width('100%')
     .height('100%')
     .expandSafeArea()
-    .bindSheet($$this.showPlaylist, this.PlayListBuilder(), {
+    .bindSheet($$this.showPlaylist, this.selector ? this.PlayList() : this.PlayListBuilder(), {
       showClose: false,
       detents: [SheetSize.MEDIUM, SheetSize.LARGE],
       dragBar: false,
       scrollSizeMode: ScrollSizeMode.CONTINUOUS,
+      preferType: SheetType.BOTTOM,
       backgroundColor: $r('app.color.playlist_bg'),
+      onWillDismiss: () => {
+        this.showPlaylist = false;
+        this.selector = false;
+      }
     })
   }
 }

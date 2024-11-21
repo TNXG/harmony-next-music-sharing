@@ -23,7 +23,7 @@ export class PreferencesUtil {
     return false;
 	}
 
-  public static init(context: common.UIAbilityContext, name: string = P_NAME) {
+  public static async  init(context: common.UIAbilityContext, name: string = P_NAME) {
     if (PreferencesUtil.preferences) return
     PreferencesUtil.preferences = dataPreferences.getPreferencesSync(context, { name })
     PreferencesUtil.preferencesAsync = dataPreferences.getPreferences(context, name).then(r => {

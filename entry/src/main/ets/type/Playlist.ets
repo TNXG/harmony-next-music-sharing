@@ -16,601 +16,468 @@ export enum ArtistMstEnum {
 /**
  * 音质信息
  */
-export interface SongQuality {
+@Observed
+export class SongQuality {
   /** 比特率 */
-  br: number;
+  br: number = 0;
 
   /** 文件ID */
-  fid: number;
+  fid: number = 0;
 
   /** 大小 */
-  size: number;
+  size: number = 0;
 
   /** 音量调节值 */
-  vd: number;
+  vd: number = 0;
 
   /** 采样率 */
-  sr: number;
+  sr: number = 0;
+
+  constructor(quality?: SongQuality) {
+    if (quality !== undefined) {
+      this.br = quality.br;
+      this.fid = quality.fid;
+      this.size = quality.size;
+      this.vd = quality.vd;
+      this.sr = quality.sr;
+    }
+  }
 }
 
 /**
  * 试听权限
  */
-export interface FreeTrialPrivilege {
+@Observed
+export class FreeTrialPrivilege {
   /** 是否可消费资源 */
-  resConsumable: boolean;
+  resConsumable: boolean = false;
 
   /** 是否可用户消费 */
-  userConsumable: boolean;
-  // /** 试听类型 */
-  // listenType: any;
-  // /** 无法试听原因 */
-  // cannotListenReason: any;
-  // /** 播放原因 */
-  // playReason: any;
-  // /** 标签类型 */
-  // freeLimitTagType: any;
+  userConsumable: boolean = false;
+
+  constructor(privilege?: FreeTrialPrivilege) {
+    if (privilege) {
+      this.resConsumable = privilege.resConsumable;
+      this.userConsumable = privilege.userConsumable;
+    }
+  }
 }
 
 /**
  * 收费信息
  */
-export interface ChargeInfo {
+@Observed
+export class ChargeInfo {
   /** 比特率 */
-  rate: number;
-  // /** 收费链接 */
-  // chargeUrl: any;
-  // /** 收费信息 */
-  // chargeMessage: any;
-  // /** 收费类型 */
-  // chargeType: number;
+  rate: number = 0;
+
+  constructor(info?: ChargeInfo) {
+    if (info) {
+      this.rate = info.rate;
+    }
+  }
 }
 
 /**
  * 歌曲播放权限
  */
-export interface Privilege {
-  /** 歌曲ID */
-  id: number;
+@Observed
+export class Privilege {
+  id: number = 0;
+  // fee: number = 0;
+  // payed: number = 0;
+  // realPayed: number = 0;
+  st: number = 0;
+  // pl: number = 0;
+  // dl: number = 0;
+  // sp: number = 0;
+  // cp: number = 0;
+  // subp: number = 0;
+  // cs: boolean = false;
+  // maxbr: number = 0;
+  // fl: number = 0;
+  // toast: boolean = false;
+  // flag: number = 0;
+  // paidBigBang: boolean = false;
+  // preSell: boolean = false;
+  // playMaxbr: number = 0;
+  // downloadMaxbr: number = 0;
+  // maxBrLevel: string = '';
+  // playMaxBrLevel: string = '';
+  // downloadMaxBrLevel: string = '';
+  // plLevel: string = '';
+  dlLevel: string = '';
+  // flLevel: string = '';
+  // freeTrialPrivilege: FreeTrialPrivilege = new FreeTrialPrivilege();
+  // rightSource: number = 0;
+  // chargeInfoList: ChargeInfo[] = [];
 
-  /** 费用 */
-  fee: number;
-
-  /** 是否付费 */
-  payed: number;
-
-  /** 是否实际付费 */
-  realPayed: number;
-
-  /** 状态 */
-  st: number;
-
-  /** 播放等级 */
-  pl: number;
-
-  /** 下载等级 */
-  dl: number;
-
-  /** 特殊项 */
-  sp: number;
-
-  /** 版权项 */
-  cp: number;
-
-  /** 子版权项 */
-  subp: number;
-
-  /** 是否cs */
-  cs: boolean;
-
-  /** 最大码率 */
-  maxbr: number;
-
-  /** 免费等级 */
-  fl: number;
-
-  // /** pc信息 */
-  // pc: any;
-  /** 是否显示toast */
-  toast: boolean;
-
-  /** 标记 */
-  flag: number;
-
-  /** 是否付费大爆炸 */
-  paidBigBang: boolean;
-
-  /** 是否预售 */
-  preSell: boolean;
-
-  /** 播放最大码率 */
-  playMaxbr: number;
-
-  /** 下载最大码率 */
-  downloadMaxbr: number;
-
-  /** 最大音质等级 */
-  maxBrLevel: string;
-
-  /** 播放最大音质等级 */
-  playMaxBrLevel: string;
-
-  /** 下载最大音质等级 */
-  downloadMaxBrLevel: string;
-
-  /** 播放等级 */
-  plLevel: string;
-
-  /** 下载等级 */
-  dlLevel: string;
-
-  /** 免费等级 */
-  flLevel: string;
-
-  // /** 资源列 */
-  // rscl: any;
-  /** 免费试听权限 */
-  freeTrialPrivilege: FreeTrialPrivilege;
-
-  /** 右侧来源 */
-  rightSource: number;
-
-  /** 收费信息列表 */
-  chargeInfoList: ChargeInfo[];
+  constructor(privilege?: Privilege) {
+    if (privilege !== undefined) {
+      this.id = privilege.id;
+      // this.fee = privilege.fee;
+      // this.payed = privilege.payed;
+      // this.realPayed = privilege.realPayed;
+      this.st = privilege.st;
+      // this.pl = privilege.pl;
+      // this.dl = privilege.dl;
+      // this.sp = privilege.sp;
+      // this.cp = privilege.cp;
+      // this.subp = privilege.subp;
+      // this.cs = privilege.cs;
+      // this.maxbr = privilege.maxbr;
+      // this.fl = privilege.fl;
+      // this.toast = privilege.toast;
+      // this.flag = privilege.flag;
+      // this.paidBigBang = privilege.paidBigBang;
+      // this.preSell = privilege.preSell;
+      // this.playMaxbr = privilege.playMaxbr;
+      // this.downloadMaxbr = privilege.downloadMaxbr;
+      // this.maxBrLevel = privilege.maxBrLevel;
+      // this.playMaxBrLevel = privilege.playMaxBrLevel;
+      // this.downloadMaxBrLevel = privilege.downloadMaxBrLevel;
+      // this.plLevel = privilege.plLevel;
+      this.dlLevel = privilege.dlLevel;
+      // this.flLevel = privilege.flLevel;
+      // this.freeTrialPrivilege = new FreeTrialPrivilege(privilege.freeTrialPrivilege);
+      // this.rightSource = privilege.rightSource;
+      // this.chargeInfoList = privilege.chargeInfoList.map(info => new ChargeInfo(info));
+    }
+  }
 }
 
 /**
  * 歌曲信息
  */
-export interface Track {
-  /** 歌曲名称 */
-  name: string;
-
-  /** 歌曲ID */
-  id: number;
-
-  /** 状态 */
-  pst: number;
-
-  /** 类型 */
-  t: number;
-
-  /** 歌手列表 */
-  ar: Artist[];
-
-  /** 别名列表 */
-  alia: string[];
-
-  /** 流行度 */
-  pop: number;
-
-  /** 状态 */
-  st: number;
-
-  /** rt */
-  rt: string;
-
-  /** 费用 */
-  fee: number;
-
-  /** 版本 */
-  v: number;
-
-  // /** 原唱 */
-  // crbt: any;
-  /** cf */
-  cf: string;
-
-  /** 专辑信息 */
-  al: Album;
-
-  /** 时长 */
-  dt: number;
-
-  /** 高质量音频信息 */
-  h: SongQuality;
-
-  /** 中质量音频信息 */
-  m: SongQuality;
-
-  /** 低质量音频信息 */
-  l: SongQuality;
-
-  /** 超高质量音频信息 */
-  sq: SongQuality;
-
-  /** Hi-Res质量音频信息 */
-  hr: SongQuality | null;
-
-  // /** 音频信息 */
-  // a: any;
-  /** CD序号 */
-  cd: string;
-
-  /** 歌曲编号 */
-  no: number;
-
-  // /** rtUrl */
-  // rtUrl: any;
-  /** 文件类型 */
-  ftype: number;
-
-  // /** rtUrls */
-  // rtUrls: any[];
-  /** djId */
-  djId: number;
-
-  /** 版权 */
-  copyright: number;
-
-  /** s_id */
-  s_id: number;
-
-  /** 标记 */
-  mark: number;
-
-  /** 原始封面类型 */
-  originCoverType: number;
-
-  // /** 原始歌曲简单数据 */
-  // originSongSimpleData: any;
-  // /** 标签图片列表 */
-  // tagPicList: any;
-  /** 资源状态 */
-  resourceState: boolean;
-
-  /** 版本号 */
-  version: number;
-
-  // /** songJumpInfo */
-  // songJumpInfo: any;
-  // /** entertainmentTags */
-  // entertainmentTags: any;
-  // /** awardTags */
-  // awardTags: any;
-  /** 单曲类型 */
-  single: number;
-
-  // /** noCopyrightRcmd */
-  // noCopyrightRcmd: any;
-  // /** 推荐算法 */
-  // alg: any;
-  // /** 展示原因 */
-  // displayReason?: any;
-  /** mv id */
-  mv: number;
-
-  /** 发布时间 */
-  publishTime: number;
-
-  /** 翻译名 */
+@Observed
+export class Track {
+  name: string = '';
+  id: number = 0;
+  // pst: number = 0;
+  // t: number = 0;
+  ar: Artist[] = [];
+  alia: string[] = [];
+  // pop: number = 0;
+  // st: number = 0;
+  // rt: string = '';
+  // fee: number = 0;
+  // v: number = 0;
+  // cf: string = '';
+  al: Album = new Album();
+  // dt: number = 0;
+  // h: SongQuality = new SongQuality();
+  // m: SongQuality = new SongQuality();
+  // l: SongQuality = new SongQuality();
+  // sq: SongQuality = new SongQuality();
+  // hr: SongQuality | null = null;
+  // cd: string = '';
+  // no: number = 0;
+  // ftype: number = 0;
+  // djId: number = 0;
+  // copyright: number = 0;
+  // s_id: number = 0;
+  // mark: number = 0;
+  // originCoverType: number = 0;
+  // resourceState: boolean = false;
+  // version: number = 0;
+  // single: number = 0;
+  // mv: number = 0;
+  // publishTime: number = 0;
   tns?: string[];
+
+  constructor(track?: Track) {
+    if (track !== undefined) {
+      this.name = track.name;
+      this.id = track.id;
+      // this.pst = track.pst;
+      // this.t = track.t;
+      this.ar = track.ar.map(artist => new Artist(artist));
+      this.alia = track.alia;
+      // this.pop = track.pop;
+      // this.st = track.st;
+      // this.rt = track.rt;
+      // this.fee = track.fee;
+      // this.v = track.v;
+      // this.cf = track.cf;
+      this.al = new Album(track.al);
+      // this.dt = track.dt;
+      // this.h = new SongQuality(track.h);
+      // this.m = new SongQuality(track.m);
+      // this.l = new SongQuality(track.l);
+      // this.sq = new SongQuality(track.sq);
+      // this.hr = track.hr ? new SongQuality(track.hr) : null;
+      // this.cd = track.cd;
+      // this.no = track.no;
+      // this.ftype = track.ftype;
+      // this.djId = track.djId;
+      // this.copyright = track.copyright;
+      // this.s_id = track.s_id;
+      // this.mark = track.mark;
+      // this.originCoverType = track.originCoverType;
+      // this.resourceState = track.resourceState;
+      // this.version = track.version;
+      // this.single = track.single;
+      // this.mv = track.mv;
+      // this.publishTime = track.publishTime;
+      this.tns = track.tns;
+    }
+  }
 }
 
 /**
  * 歌曲ID对象
  */
-export interface TrackId {
-  /** 歌曲ID */
-  id: number;
+@Observed
+export class TrackId {
+  id: number = 0;
+  // v: number = 0;
+  // t: number = 0;
+  // at: number = 0;
+  // uid: number = 0;
+  // rcmdReason: string = '';
+  // rcmdReasonTitle?: string;
 
-  /** 版本 */
-  v: number;
-
-  /** 类型 */
-  t: number;
-
-  /** 更新时间 */
-  at: number;
-
-  // /** 算法类型 */
-  // alg: any;
-  /** 用户ID */
-  uid: number;
-
-  /** 推荐原因 */
-  rcmdReason: string;
-
-  /** 推荐原因标题 */
-  rcmdReasonTitle?: string;
+  constructor(trackId?: TrackId) {
+    if (trackId !== undefined) {
+      this.id = trackId.id;
+      // this.v = trackId.v;
+      // this.t = trackId.t;
+      // this.at = trackId.at;
+      // this.uid = trackId.uid;
+      // this.rcmdReason = trackId.rcmdReason;
+      // this.rcmdReasonTitle = trackId.rcmdReasonTitle;
+    }
+  }
 }
 
 /**
  * 创建者信息
  */
-export interface Creator {
-  /** 默认头像 */
-  defaultAvatar: boolean;
+@Observed
+export class Creator {
+  // defaultAvatar: boolean = false;
+  // province: number = 0;
+  // authStatus: number = 0;
+  // followed: boolean = false;
+  avatarUrl: string = '';
+  // accountStatus: number = 0;
+  // gender: number = 0;
+  // city: number = 0;
+  // birthday: number = 0;
+  userId: number = 0;
+  // userType: number = 0;
+  nickname: string = '';
+  // signature: string = '';
+  // description: string = '';
+  // detailDescription: string = '';
+  // avatarImgId: number = 0;
+  // backgroundImgId: number = 0;
+  // backgroundUrl: string = '';
+  // authority: number = 0;
+  // mutual: boolean = false;
+  // djStatus: number = 0;
+  // vipType: number = 0;
+  // authenticationTypes: number = 0;
+  // avatarImgIdStr: string = '';
+  // backgroundImgIdStr: string = '';
+  // anchor: boolean = false;
 
-  /** 省份 */
-  province: number;
-
-  /** 认证状态 */
-  authStatus: number;
-
-  /** 是否关注 */
-  followed: boolean;
-
-  /** 头像URL */
-  avatarUrl: string;
-
-  /** 账号状态 */
-  accountStatus: number;
-
-  /** 性别 */
-  gender: number;
-
-  /** 城市 */
-  city: number;
-
-  /** 生日 */
-  birthday: number;
-
-  /** 用户ID */
-  userId: number;
-
-  /** 用户类型 */
-  userType: number;
-
-  /** 昵称 */
-  nickname: string;
-
-  /** 签名 */
-  signature: string;
-
-  /** 描述 */
-  description: string;
-
-  /** 详细描述 */
-  detailDescription: string;
-
-  /** 头像ID */
-  avatarImgId: number;
-
-  /** 背景图ID */
-  backgroundImgId: number;
-
-  /** 背景URL */
-  backgroundUrl: string;
-
-  /** 权限 */
-  authority: number;
-
-  /** 是否互相关注 */
-  mutual: boolean;
-
-  /** 专家标签 */
-  // expertTags: any;
-  // /** 专家 */
-  // experts: any;
-  /** dj状态 */
-  djStatus: number;
-
-  /** vip类型 */
-  vipType: number;
-
-  // /** 备注名 */
-  // remarkName: any;
-  /** 认证类型 */
-  authenticationTypes: number;
-
-  // /** 头像详情 */
-  // avatarDetail: any;
-  /** 头像ID字符串 */
-  avatarImgIdStr: string;
-
-  /** 背景图ID字符串 */
-  backgroundImgIdStr: string;
-
-  /** 是否主播 */
-  anchor: boolean;
+  constructor(creator?: Creator) {
+    if (creator !== undefined) {
+      // this.defaultAvatar = creator.defaultAvatar;
+      // this.province = creator.province;
+      // this.authStatus = creator.authStatus;
+      // this.followed = creator.followed;
+      this.avatarUrl = creator.avatarUrl;
+      // this.accountStatus = creator.accountStatus;
+      // this.gender = creator.gender;
+      // this.city = creator.city;
+      // this.birthday = creator.birthday;
+      this.userId = creator.userId;
+      // this.userType = creator.userType;
+      this.nickname = creator.nickname;
+      // this.signature = creator.signature;
+      // this.description = creator.description;
+      // this.detailDescription = creator.detailDescription;
+      // this.avatarImgId = creator.avatarImgId;
+      // this.backgroundImgId = creator.backgroundImgId;
+      // this.backgroundUrl = creator.backgroundUrl;
+      // this.authority = creator.authority;
+      // this.mutual = creator.mutual;
+      // this.djStatus = creator.djStatus;
+      // this.vipType = creator.vipType;
+      // this.authenticationTypes = creator.authenticationTypes;
+      // this.avatarImgIdStr = creator.avatarImgIdStr;
+      // this.backgroundImgIdStr = creator.backgroundImgIdStr;
+      // this.anchor = creator.anchor;
+    }
+  }
 }
 
 /**
  * 单个歌单信息
  */
-export interface Playlist {
-  // /** 订阅者 */
-  // subscribers: any[];
-  /** 是否订阅 */
-  subscribed: boolean | null;
+@Observed
+export class Playlist {
+  // subscribed: boolean | null = null;
+  creator: Creator = new Creator();
+  artists: Artist[] | null = null;
+  tracks: Track[] | null = null;
+  trackIds: TrackId[] | null = null;
+  // top: boolean = false;
+  updateFrequency: string | null = null;
+  // backgroundCoverId: number = 0;
+  // backgroundCoverUrl: string | null = null;
+  // titleImage: number = 0;
+  // titleImageUrl: string | null = null;
+  // englishTitle: string | null = null;
+  // opRecommend: boolean = false;
+  // subscribedCount: number = 0;
+  // cloudTrackCount: number = 0;
+  // userId: number = 0;
+  // totalDuration: number = 0;
+  // coverImgId: number = 0;
+  // privacy: number = 0;
+  // trackUpdateTime: number = 0;
+  trackCount: number = 0;
+  // updateTime: number = 0;
+  // commentThreadId: string = '';
+  coverImgUrl: string = '';
+  // specialType: number = 0;
+  // anonimous: boolean = false;
+  // createTime: number = 0;
+  // highQuality: boolean = false;
+  // newImported: boolean = false;
+  // trackNumberUpdateTime: number = 0;
+  // playCount: number = 0;
+  // adType: number = 0;
+  // description: string | null = null;
+  // tags: string[] = [];
+  // ordered: boolean = false;
+  // status: number = 0;
+  name: string = '';
+  id: number = 0;
+  // coverImgId_str?: string;
+  // copied: boolean = false;
+  // containsTracks: boolean = false;
+  // transNames?: string[];
+  // hasBaseInfo?: boolean = false;
 
-  /** 创建者 */
-  creator: Creator;
-
-  /** 艺术家 */
-  artists: Artist[] | null;
-
-  /** 歌曲 */
-  tracks: Track[] | null;
-
-  /** 所有歌曲的ID */
-  trackIds: TrackId[] | null;
-
-  /** 是否置顶 */
-  top: boolean;
-
-  /** 更新频率 */
-  updateFrequency: string | null;
-
-  /** 背景封面ID */
-  backgroundCoverId: number;
-
-  /** 背景封面URL */
-  backgroundCoverUrl: string | null;
-
-  /** 标题图片 */
-  titleImage: number;
-
-  /** 标题图片URL */
-  titleImageUrl: string | null;
-
-  /** 英文标题 */
-  englishTitle: string | null;
-
-  /** 官方推荐 */
-  opRecommend: boolean;
-
-  // /** 推荐信息 */
-  // recommendInfo: any | null;
-  /** 订阅数 */
-  subscribedCount: number;
-
-  /** 云盘歌曲数 */
-  cloudTrackCount: number;
-
-  /** 创建者ID */
-  userId: number;
-
-  /** 总时长 */
-  totalDuration: number;
-
-  /** 封面图片ID */
-  coverImgId: number;
-
-  /** 隐私设置 */
-  privacy: number;
-
-  /** 歌曲更新时间 */
-  trackUpdateTime: number;
-
-  /** 歌曲数量 */
-  trackCount: number;
-
-  /** 更新时间 */
-  updateTime: number;
-
-  /** 评论线程ID */
-  commentThreadId: string;
-
-  /** 封面URL */
-  coverImgUrl: string;
-
-  /** 特殊类型 */
-  specialType: number;
-
-  /** 是否匿名 */
-  anonimous: boolean;
-
-  /** 创建时间 */
-  createTime: number;
-
-  /** 是否精品 */
-  highQuality: boolean;
-
-  /** 是否新导入 */
-  newImported: boolean;
-
-  /** 歌曲数量更新时间 */
-  trackNumberUpdateTime: number;
-
-  /** 播放数 */
-  playCount: number;
-
-  /** 广告类型 */
-  adType: number;
-
-  /** 描述 */
-  description: string | null;
-
-  /** 标签 */
-  tags: string[];
-
-  /** 是否有序 */
-  ordered: boolean;
-
-  /** 状态 */
-  status: number;
-
-  /** 歌单名称 */
-  name: string;
-
-  /** 歌单ID */
-  id: number;
-
-  /** 封面图片ID字符串 */
-  coverImgId_str?: string;
-
-  // /** 共享用户 */
-  // sharedUsers: any | null;
-  // /** 共享状态 */
-  // shareStatus: any | null;
-  /** 是否复制 */
-  copied: boolean;
-
-  /** 是否包含歌曲 */
-  containsTracks: boolean;
-
-  /** 翻译名称 */
-  transNames?: string[];
-
-  // 非官方字段 判断是否有具体信息，如果没有则要进行获取。
-  hasBaseInfo?: boolean
+  constructor(playlist?: Playlist) {
+    if (playlist !== undefined) {
+      // this.subscribed = playlist.subscribed;
+      this.creator = new Creator(playlist.creator);
+      this.artists = playlist.artists ? playlist.artists.map(artist => new Artist(artist)) : null;
+      this.tracks = playlist.tracks ? playlist.tracks.map(track => new Track(track)) : null;
+      this.trackIds = playlist.trackIds ? playlist.trackIds.map(trackId => new TrackId(trackId)) : null;
+      // this.top = playlist.top;
+      this.updateFrequency = playlist.updateFrequency;
+      // this.backgroundCoverId = playlist.backgroundCoverId;
+      // this.backgroundCoverUrl = playlist.backgroundCoverUrl;
+      // this.titleImage = playlist.titleImage;
+      // this.titleImageUrl = playlist.titleImageUrl;
+      // this.englishTitle = playlist.englishTitle;
+      // this.opRecommend = playlist.opRecommend;
+      // this.subscribedCount = playlist.subscribedCount;
+      // this.cloudTrackCount = playlist.cloudTrackCount;
+      // this.userId = playlist.userId;
+      // this.totalDuration = playlist.totalDuration;
+      // this.coverImgId = playlist.coverImgId;
+      // this.privacy = playlist.privacy;
+      // this.trackUpdateTime = playlist.trackUpdateTime;
+      this.trackCount = playlist.trackCount;
+      // this.updateTime = playlist.updateTime;
+      // this.commentThreadId = playlist.commentThreadId;
+      this.coverImgUrl = playlist.coverImgUrl;
+      // this.specialType = playlist.specialType;
+      // this.anonimous = playlist.anonimous;
+      // this.createTime = playlist.createTime;
+      // this.highQuality = playlist.highQuality;
+      // this.newImported = playlist.newImported;
+      // this.trackNumberUpdateTime = playlist.trackNumberUpdateTime;
+      // this.playCount = playlist.playCount;
+      // this.adType = playlist.adType;
+      // this.description = playlist.description;
+      // this.tags = playlist.tags;
+      // this.ordered = playlist.ordered;
+      // this.status = playlist.status;
+      this.name = playlist.name;
+      this.id = playlist.id;
+      // this.coverImgId_str = playlist.coverImgId_str;
+      // this.copied = playlist.copied;
+      // this.containsTracks = playlist.containsTracks;
+      // this.transNames = playlist.transNames;
+      // this.hasBaseInfo = playlist.hasBaseInfo;
+    }
+  }
 }
 
-export interface PlaylistDetailResponse {
-  /** 响应码 */
-  code: number;
+@Observed
+export class PlaylistDetailResponse {
+  code: number = 0;
+  playlist: Playlist = new Playlist();
+  privileges: Privilege[] = [];
 
-  // /** 相关视频 */
-  // relatedVideos: any;
-  /** 歌单信息 */
-  playlist: Playlist;
-
-  /** 歌曲权限列表 */
-  privileges: Privilege[];
+  constructor(response?: PlaylistDetailResponse) {
+    if (response !== undefined) {
+      this.code = response.code;
+      this.playlist = new Playlist(response.playlist);
+      this.privileges = response.privileges.map(privilege => new Privilege(privilege));
+    }
+  }
 }
 
-/**
- * 用户歌单列表响应
- */
-export interface UserPlaylistResponse {
-  /** 是否还有更多 */
-  more: boolean;
+@Observed
+export class UserPlaylistResponse {
+  more: boolean = false;
+  playlist: Playlist[] = [];
+  code: number = 0;
 
-  /** 歌单列表 */
-  playlist: Playlist[];
-
-  /** 响应码 */
-  code: number;
+  constructor(response?: UserPlaylistResponse) {
+    if (response !== undefined) {
+      this.more = response.more;
+      this.code = response.code;
+      this.playlist = response.playlist.map(playlist => new Playlist(playlist));
+    }
+  }
 }
 
+@Observed
+export class StatsResponse {
+  commentCount: number = 0;
+  shareCount: number = 0;
+  playCount: number = 0;
+  bookedCount: number = 0;
+  subscribed: boolean = false;
+  remarkName: string | null = null;
+  followed: boolean = false;
+  gradeStatus: string = '';
+  code: number = 0;
 
-/**
- * 简单统计信息响应
- */
-export default interface StatsResponse {
-  /** 评论数 */
-  commentCount: number;
-
-  /** 分享数 */
-  shareCount: number;
-
-  /** 播放数 */
-  playCount: number;
-
-  /** 收藏数 */
-  bookedCount: number;
-
-  /** 是否已订阅 */
-  subscribed: boolean;
-
-  /** 备注名 */
-  remarkName: string | null;
-
-  /** 是否已关注 */
-  followed: boolean;
-
-  /** 等级状态 */
-  gradeStatus: string;
-
-  // /** 混音视频 */
-  // remixVideo: any | null;
-  /** 响应码 */
-  code: number;
+  constructor(response?: StatsResponse) {
+    if (response !== undefined) {
+      this.commentCount = response.commentCount;
+      this.shareCount = response.shareCount;
+      this.playCount = response.playCount;
+      this.bookedCount = response.bookedCount;
+      this.subscribed = response.subscribed;
+      this.remarkName = response.remarkName;
+      this.followed = response.followed;
+      this.gradeStatus = response.gradeStatus;
+      this.code = response.code;
+    }
+  }
 }
 
-export interface TrackAndPrivilege {
-  track: Track,
-  privilege: Privilege
+@Observed
+export class TrackAndPrivilege {
+  track: Track = new Track();
+  privilege: Privilege = new Privilege();
+
+  constructor(data?: TrackAndPrivilege) {
+    if (data !== undefined) {
+      this.track = new Track(data.track);
+      this.privilege = new Privilege(data.privilege);
+    }
+  }
 }

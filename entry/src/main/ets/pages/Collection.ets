@@ -5,10 +5,11 @@ import { SongListCard } from '../component/SongListCard'
 import { getPlayListDetail, getPlayListDetailDynamic } from '../api/Playlist'
 import { AccountProfile } from '../type/Account'
 import Logger from '../common/Logger'
-import { getSongDetail, playlistSubscribe } from '../api/Song'
+import { collectSong, getSongDetail, playlistSubscribe } from '../api/Song'
 import { promptAction, router } from '@kit.ArkUI'
 import { globalPlaylist } from '../common/GlobalPlayListManager'
 import { LazyData } from '@pie/lazy-data'
+import { PlaylistSelector } from '../component/PlaylistSelector'
 
 interface BasePlayListInfo {
   name: string
@@ -23,20 +24,194 @@ struct Collection {
   @StorageLink("Profile") profile: AccountProfile | null = null
   @StorageLink("Track") track: TrackAndPrivilege | null = null
   @State scrollY: number = 0
-  @State appearItems: number[] = []
   @State isLoading: boolean = true
   @State loadingPlaylist: boolean = true
   @State trackIds: TrackId[] = []
   @State basePlayListInfo: BasePlayListInfo | null = null
   @State subscribed: boolean = false
-  private dataSource: LazyData<Track> = new LazyData();
+  @State dataSource: LazyData<Track> = new LazyData()
   private offsetValue = 0
   private isCreator = false
   private allTracks: Track[] = []
   private allPrivileges: Privilege[] = []
   private finished = false;
-  private loadAll = false;
   private privilegeMap = new Map<number | string, Privilege>();
+  @State isSelectMode: boolean = false // 是否处于多选模式
+  @State selectedTracks: Set<number> = new Set() // 已选择的歌曲id集合
+  @State showPlayList: boolean = false;
+
+  @Builder
+  PlayList() {
+    Column() {
+      PlaylistSelector({
+        onSelect: async (id: string | number) => {
+          const ids = Array.from(this.selectedTracks)
+          await collectSong(id, ids)
+          promptAction.showToast({ message: "已添加到收藏夹" })
+          this.showPlayList = false;
+          this.isSelectMode = false
+          this.selectedTracks.clear()
+        }
+      })
+    }
+    .expandSafeArea()
+    .height("100%")
+    .backgroundColor($r('app.color.playlist_bg'))
+    .layoutWeight(1)
+  }
+
+  @Builder
+  SelectModeTopBar() {
+    Row() {
+      Button({ type: ButtonType.Circle }) {
+        Image($r('app.media.ic_close'))
+          .width(24)
+          .height(24)
+          .fillColor($r('app.color.icon_color'))
+      }
+      .backgroundColor(Color.Transparent)
+      .onClick(() => {
+        this.isSelectMode = false
+        this.selectedTracks.clear()
+      })
+
+      Text(`已选择 ${this.selectedTracks.size} 首`)
+        .fontSize(16)
+        .fontWeight(FontWeight.Medium)
+        .fontColor($r('app.color.text_primary'))
+        .margin({ left: 12 })
+
+      Blank()
+
+      Button({ type: ButtonType.Circle }) {
+        Text('全选')
+          .fontColor($r('app.color.text_primary'))
+          .fontSize(14)
+      }
+      .backgroundColor(Color.Transparent)
+      .onClick(() => {
+        if (this.selectedTracks.size === this.allTracks.length) {
+          this.selectedTracks.clear()
+        } else {
+          this.allTracks.forEach(track => {
+            this.selectedTracks.add(track.id)
+          })
+        }
+      })
+    }
+    .width('100%')
+    .height(56)
+    .padding({ left: 16, right: 16 })
+    .backgroundColor(Color.Transparent)
+  }
+
+  @Builder
+  SelectModeBottomBar() {
+    Row({ space: 12 }) {
+      if (this.isCreator) {
+        Button({ type: ButtonType.Capsule }) {
+          Row() {
+            Image($r('app.media.ic_trash'))
+              .width(20)
+              .height(20)
+              .fillColor($r('app.color.text_primary'))
+              .margin({ right: 4 })
+            Text('移除')
+              .fontSize(14)
+              .fontColor($r('app.color.text_primary'))
+          }
+        }
+        .backgroundColor(Color.Transparent)
+        .height(40)
+        .padding({ left: 16, right: 16 })
+        .onClick(async () => {
+          AlertDialog.show({
+            title: '移除歌曲',
+            message: '确定要移除选中的歌曲吗？',
+            primaryButton: {
+              value: '取消',
+              action: () => {
+              }
+            },
+            secondaryButton: {
+              value: '确定',
+              action: async () => {
+                const ids = Array.from(this.selectedTracks)
+                await collectSong(this.collectionId, ids, "del")
+                this.isSelectMode = false
+                this.selectedTracks.clear()
+                promptAction.showToast({ message: "已移除歌曲" })
+              }
+            }
+          })
+        })
+      }
+
+      Button({ type: ButtonType.Capsule }) {
+        Row() {
+          Image($r('app.media.ic_star'))
+            .width(20)
+            .height(20)
+            .fillColor($r('app.color.text_primary'))
+            .margin({ right: 4 })
+          Text('收藏')
+            .fontSize(14)
+            .fontColor($r('app.color.text_primary'))
+        }
+      }
+      .backgroundColor(Color.Transparent)
+      .height(40)
+      .padding({ left: 16, right: 16 })
+      .margin({ right: 12 })
+      .onClick(() => {
+        this.showPlayList = true
+      })
+
+      Button({ type: ButtonType.Capsule }) {
+        Row() {
+          Image($r('app.media.ic_plus'))
+            .width(20)
+            .height(20)
+            .fillColor($r('app.color.text_primary'))
+            .margin({ right: 4 })
+          Text('添加到播放列表')
+            .fontSize(14)
+            .fontColor($r('app.color.text_primary'))
+        }
+      }
+      .backgroundColor(Color.Transparent)
+      .height(40)
+      .padding({ left: 16, right: 16 })
+      .onClick(() => {
+        const selectedSongs = this.allTracks
+          .filter(track => this.selectedTracks.has(track.id))
+          .map(track => {
+            const song = new TrackAndPrivilege()
+            song.track = track
+            song.privilege = this.privilegeMap.get(track.id)!
+            return song
+          })
+
+        selectedSongs.forEach(song => globalPlaylist.addSong(song))
+        promptAction.showToast({
+          message: `已添加 ${selectedSongs.length} 首歌曲到播放列表`
+        })
+        this.isSelectMode = false
+        this.selectedTracks.clear()
+      })
+    }
+    .padding(8)
+    .justifyContent(FlexAlign.Center)
+    .width('100%')
+    .height("100%")
+    .backgroundColor($r('app.color.page_background'))
+    .position({ x: 0, y: 'calc(100% - 40)' })
+    .expandSafeArea()
+    .animation({
+      duration: 200,
+      curve: Curve.EaseInOut
+    })
+  }
 
   aboutToAppear() {
     if (this.collectionId) {
@@ -45,38 +220,57 @@ struct Collection {
   }
 
   private async loadAllTracks() {
-    if (this.finished || !this.profile || this.isCreator) {
+    if (this.finished || !this.profile) {
       return;
     }
 
     try {
-      // 限制最多加载10000首
-      const remainingIds: Array<number | string> = this.trackIds
-        .slice(this.offsetValue, 10000)
+      const BATCH_SIZE = 500;
+      const MAX_TRACKS = 10000;
+
+      // 获取剩余需要加载的ID
+      const remainingIds = this.trackIds
+        .slice(this.offsetValue, MAX_TRACKS)
         .map(t => t.id);
 
-      if (remainingIds.length > 0) {
-        const songDetail = await getSongDetail(remainingIds);
+      // 分批处理
+      for (let i = 0; i < remainingIds.length; i += BATCH_SIZE) {
+        const batchIds = remainingIds.slice(i, i + BATCH_SIZE);
+
+        if (batchIds.length === 0) {
+          break;
+        }
+
+        const songDetail = await getSongDetail(batchIds);
+
+        // 添加到总列表
         this.allTracks.push(...(songDetail.songs as ESObject as Track[]));
         this.allPrivileges.push(...(songDetail.privileges as ESObject as Privilege[]));
 
-        // 更新 privilegeMap
-        this.privilegeMap = new Map(
-          this.allPrivileges.map(privilege => [privilege.id, privilege])
-        );
+        this.dataSource.setData(this.allTracks)
+        this.dataSource.notifyDataReload()
 
-        // 使用 Map 匹配权限添加歌曲
-        this.allTracks.forEach(track => {
-          globalPlaylist.addSong({
-            track: track,
-            privilege: this.privilegeMap.get(track.id)!
-          });
+
+        // 更新权限Map
+        songDetail.privileges.forEach(privilege => {
+          this.privilegeMap.set(privilege.id, new Privilege(privilege as ESObject as Privilege));
         });
 
-        this.finished = true;
+        // 处理新加入的歌曲
+        songDetail.songs.forEach(track => {
+          const song = new TrackAndPrivilege();
+          song.track = track as ESObject as Track
+          song.privilege = this.privilegeMap.get(track.id)!;
+          globalPlaylist.addSong(song);
+        });
       }
+
+      this.offsetValue = this.allTracks.length
+
+      this.finished = true;
+
     } catch (error) {
-      Logger.error('Failed to load all tracks:', error);
+      Logger.error('Failed to load tracks:', error);
     }
   }
 
@@ -118,13 +312,45 @@ struct Collection {
       {
         value: '添加到下一首',
         action: () => {
-          const trackAndPrivilege: TrackAndPrivilege = {
-            track,
-            privilege: this.privilegeMap.get(track.id)!
-          }
-          globalPlaylist.insertOrMoveNext(trackAndPrivilege)
+          const song = new TrackAndPrivilege()
+          song.track = track
+          song.privilege = this.privilegeMap.get(track.id)!
+          globalPlaylist.insertOrMoveNext(song)
         }
       },
+      {
+        value: '收藏到歌单',
+        action: () => {
+          // 弹出收藏歌单选择器
+          this.selectedTracks.add(track.id)
+          this.showPlayList = true 
+        }
+      },
+      {
+        value: '从歌单移除歌曲',
+        action: () => {
+          if (this.isCreator) {
+            AlertDialog.show({
+              title: '移除歌曲',
+              message: '确定要移除这首歌曲吗？',
+              primaryButton: {
+                value: '取消',
+                action: () => {
+                }
+              },
+              secondaryButton: {
+                value: '确定',
+                action: async () => {
+                  await collectSong(this.collectionId, [track.id], "del")
+                  promptAction.showToast({ message: "已移除歌曲" })
+                }
+              }
+            })
+          } else {
+            promptAction.showToast({ message: "嘿！你干嘛，这不是你的歌单！" })
+          }
+        }
+      }
     ])
   }
 
@@ -231,6 +457,7 @@ struct Collection {
 
       this.finished = this.allTracks.length == this.trackIds.length
 
+
       this.basePlayListInfo = {
         name: playlistDetailRes.playlist.name,
         creator: playlistDetailRes.playlist.creator,
@@ -245,28 +472,10 @@ struct Collection {
         this.isCreator = playlistDetailRes.playlist.creator.userId === this.profile?.userId
       })
 
-      if (this.isCreator) {
-        this.allTracks.slice(0, 20).forEach((track, index) => {
-          animateTo({
-            duration: 300,
-            curve: Curve.ExtremeDeceleration
-          }, () => {
-            this.appearItems.push(index)
-            this.dataSource.pushData(track)
-          })
-        })
-      } else {
-        playlistDetailRes.playlist.tracks?.slice(0, 20).forEach((track, index) => {
-          animateTo({
-            duration: 300,
-            curve: Curve.ExtremeDeceleration
-          }, () => {
-            this.appearItems.push(index)
-            this.dataSource.pushData(track)
-          })
-        })
-      }
-      this.offsetValue = 20
+
+      this.dataSource.setData(this.allTracks)
+      this.dataSource.notifyDataReload()
+      this.offsetValue = this.allTracks.length
     } catch (error) {
       Logger.error('Failed to init playlist data:', error)
     } finally {
@@ -275,72 +484,55 @@ struct Collection {
   }
 
   async loadMoreTracks() {
-    if (!this.collectionId || this.isLoading || this.loadAll) {
-      return
+    if (!this.collectionId || this.isLoading || this.finished) {
+      return;
     }
 
-    this.isLoading = true
+    this.isLoading = true;
+    const PAGE_SIZE = 20;
+
     try {
-      if (this.isCreator || this.finished) {
-        await new Promise<void>((resolve) => {
-          const randomDelay = Math.random() * 1333;
-          setTimeout(resolve, randomDelay);
-        });
+      // Get next batch of track IDs
+      const nextIds = (this.trackIds ?? [])
+        .slice(this.offsetValue, this.offsetValue + PAGE_SIZE)
+        .map(t => t.id);
 
-        const tracks = this.isCreator ? this.allTracks : this.allTracks;
-        const nextTracks = tracks.slice(this.offsetValue, this.offsetValue + 20)
-        nextTracks.forEach((track, index) => {
-          const realIndex = this.offsetValue + index
-          animateTo({
-            duration: 300,
-            curve: Curve.ExtremeDeceleration
-          }, () => {
-            this.appearItems.push(realIndex)
-            this.dataSource.pushData(track)
-          })
-        })
-        this.offsetValue += nextTracks.length
-
-        if (this.offsetValue >= this.trackIds.length) {
-          this.loadAll = true
-        }
-      } else if (this.profile) {
-        const ids: Array<number | string> = (this.trackIds ?? [])
-          .slice(this.offsetValue, this.offsetValue + 20)
-          .map(t => t.id)
-
-        if (ids.length > 0) {
-          const songDetail = await getSongDetail(ids);
-          const songs = songDetail.songs;
-          const privileges = songDetail.privileges as ESObject as Privilege[];
-
-          // 更新 privileges 和 privilegeMap
-          this.allPrivileges.push(...privileges);
-          privileges.forEach(privilege => {
-            this.privilegeMap.set(privilege.id, privilege);
-          });
-
-          songs.forEach((song, index) => {
-            const realIndex = this.offsetValue + index
-            animateTo({
-              duration: 300,
-              curve: Curve.ExtremeDeceleration
-            }, () => {
-              this.appearItems.push(realIndex)
-              this.dataSource.pushData(song as ESObject as Track)
-            })
-          })
-          this.offsetValue += songs.length
-        }
-
-        if (this.offsetValue >= this.trackIds.length) {
-          this.loadAll = true
-        }
+      if (nextIds.length === 0) {
+        this.finished = true
+        return;
       }
+
+      // Fetch track details regardless of creator status
+      const songDetail = await getSongDetail(nextIds);
+      const songs = songDetail.songs as ESObject as Track[];
+      const privileges = songDetail.privileges as ESObject as Privilege[];
+
+      // Update privileges
+      this.allPrivileges.push(...privileges);
+      privileges.forEach(privilege => {
+        this.privilegeMap.set(privilege.id, privilege);
+      });
+
+      // Add songs with animation
+      songs.forEach((song, index) => {
+        animateTo({
+          duration: 300,
+          curve: Curve.ExtremeDeceleration
+        }, () => {
+          this.dataSource!.pushData(song);
+        });
+      });
+
+      // Update offset and check if all loaded
+      this.offsetValue += songs.length;
+      if (this.offsetValue >= this.trackIds.length) {
+        this.finished = true;
+      }
+
     } catch (error) {
-      Logger.error('Track', error)
+      Logger.error('Failed to load more tracks:', error);
     } finally {
-      this.isLoading = false
+      this.isLoading = false;
     }
   }
 
@@ -364,25 +556,25 @@ struct Collection {
         .backgroundColor(Color.Transparent)
         .height(40)
         .onClick(async () => {
-          if (!this.isCreator && !this.finished) {
+          if (!this.finished) {
             await this.loadAllTracks();
           }
 
           // 使用 privilegeMap 构建播放列表
-          const tempSongs = this.allTracks.map(track => ({
-            track,
-            privilege: this.privilegeMap.get(track.id)!
-          } as TrackAndPrivilege));
+          const tempSongs = this.allTracks.map(track => {
+            const song = new TrackAndPrivilege()
+            song.track = track
+            song.privilege = this.privilegeMap.get(track.id)!
+            return song
+          });
 
           globalPlaylist.overwrite(tempSongs);
 
-          // 加载第一首歌
-          const info: TrackAndPrivilege = {
-            track: this.allTracks[0],
-            privilege: this.privilegeMap.get(this.allTracks[0].id)!
-          };
+          const song = new TrackAndPrivilege()
+          song.track = this.allTracks[0]
+          song.privilege = this.privilegeMap.get(this.allTracks[0].id)!
 
-          AppStorage.setOrCreate("Track", info);
+          AppStorage.setOrCreate("Track", song);
           router.pushUrl({
             url: "pages/Playing",
           });
@@ -405,8 +597,8 @@ struct Collection {
       }
       .backgroundColor(Color.Transparent)
       .height(40)
-      .onClick(async ()=>{
-        if(!this.isCreator){
+      .onClick(async () => {
+        if (!this.isCreator) {
           const t = this.subscribed ? 0 : 1
           await playlistSubscribe(this.collectionId!, t)
           this.subscribed = !this.subscribed
@@ -420,19 +612,38 @@ struct Collection {
 
   @Builder
   TrackItem(track: Track, index: number) {
-    if (this.appearItems.includes(index)) {
+    Row() {
+      if (this.isSelectMode) {
+        Row() {
+          Checkbox()
+            .select(this.selectedTracks.has(track.id))
+            .onChange((value: boolean) => {
+              if (value) {
+                this.selectedTracks.add(track.id)
+              } else {
+                this.selectedTracks.delete(track.id)
+              }
+            })
+        }
+        .margin({ right: 12 })
+      }
+
       SongListCard({
         title: track.name,
         artist: track.ar,
         coverUrl: cover(track.al.picUrl, 100),
-        index,
+        showIndex: !this.isSelectMode,
+        index: this.isSelectMode ? -1 : index,
         tns: track.tns,
         disabled: !this.privilegeMap.get(track.id) || this.privilegeMap.get(track.id)!.st < 0,
         active: (!!this.track && this.track.track.id == track.id) ?? false,
-        rightSlot:() => {
-          this.MoreActions(track)
+        rightSlot: () => {
+          if (!this.isSelectMode) {
+            this.MoreActions(track)
+          }
         }
       })
+        .layoutWeight(1)
         .transition({
           type: TransitionType.Insert,
           translate: { x: 0, y: '100%' },
@@ -445,22 +656,34 @@ struct Collection {
           curve: Curve.ExtremeDeceleration
         })
         .onClick(async () => {
+          if (this.isSelectMode) {
+            // 多选模式下点击切换选中状态
+            if (this.selectedTracks.has(track.id)) {
+              this.selectedTracks.delete(track.id)
+            } else {
+              this.selectedTracks.add(track.id)
+            }
+            return
+          }
+
+          // 非多选模式下的播放逻辑
           const privilege = this.privilegeMap.get(track.id);
           if (privilege && privilege.st >= 0) {
-            if (!this.isCreator && !this.finished) {
+            if (!this.finished) {
               await this.loadAllTracks();
             }
 
-            const info: TrackAndPrivilege = {
-              track: track,
-              privilege: privilege
-            };
+            const info = new TrackAndPrivilege()
+            info.track = track
+            info.privilege = privilege
 
             // 使用 privilegeMap 构建播放列表
-            const tempSongs = this.allTracks.map(track => ({
-              track,
-              privilege: this.privilegeMap.get(track.id)
-            } as TrackAndPrivilege));
+            const tempSongs = this.allTracks.map(track => {
+              const song = new TrackAndPrivilege()
+              song.track = track
+              song.privilege = this.privilegeMap.get(track.id)!
+              return song
+            });
 
             globalPlaylist.overwrite(tempSongs);
             globalPlaylist.setCurrentIndex(index);
@@ -473,10 +696,28 @@ struct Collection {
           }
         })
     }
+    .width('100%')
+    .gesture(
+      LongPressGesture()
+        .onAction(() => {
+          if (!this.isSelectMode) {
+            animateTo({ duration: 200 }, () => {
+              this.isSelectMode = true
+              this.selectedTracks.add(track.id)
+            })
+          }
+        })
+    )
+    .padding({ left: 8, right: 8 })
+    .borderRadius(8)
+    .animation({
+      duration: 200,
+      curve: Curve.EaseInOut
+    })
   }
 
   build() {
-    Stack({ alignContent: Alignment.Top }) {
+    Column() {
       Image(this.basePlayListInfo ? cover(this.basePlayListInfo.coverImgUrl, 512) : '')
         .width(StyleConstants.FULL_WIDTH)
         .height(260)
@@ -490,6 +731,9 @@ struct Collection {
         this.SkeletonLoading()
       } else {
         Column() {
+          if (this.isSelectMode) {
+            this.SelectModeTopBar()
+          }
           Row() {
             Image(this.basePlayListInfo ? cover(this.basePlayListInfo.coverImgUrl, 512) : '')
               .width(120)
@@ -533,19 +777,25 @@ struct Collection {
             this.ActionBar()
 
             List({ space: 16 }) {
-              ListItem() {
-                Grid() {
-                  LazyForEach(this.dataSource, (item: Track, index: number) => {
-                    GridItem() {
-                      this.TrackItem(item, index)
-                    }
-                  }, (item: Track) => `track-${item.id}`)
+              if (this.dataSource !== null) {
+                ListItem() {
+                  Grid() {
+                    LazyForEach(this.dataSource, (item: Track, index: number) => {
+                      GridItem() {
+                        this.TrackItem(item, index)
+                      }.reuseId("track")
+                    }, (item: Track) => `track-${item.id}`)
+                  }
+                  .width(StyleConstants.FULL_WIDTH)
+                  .columnsTemplate('repeat(1, 1fr)')
+                  .columnsGap(8)
+                  .rowsGap(8)
+                  .padding({ left: 8, right: 8, bottom: 0 })
                 }
-                .width(StyleConstants.FULL_WIDTH)
-                .columnsTemplate('repeat(1, 1fr)')
-                .columnsGap(8)
-                .rowsGap(8)
-                .padding({ left: 8, right: 8, bottom: 0 })
+              } else {
+                ListItem() {
+                  Text("什么都没有")
+                }
               }
 
               ListItem() {
@@ -561,6 +811,7 @@ struct Collection {
                 this.LoadingAnimation()
               }
             }
+            .cachedCount(3)
             .padding({ top: 8 })
             .width(StyleConstants.FULL_WIDTH)
             .layoutWeight(1)
@@ -581,6 +832,14 @@ struct Collection {
             offsetX: 0,
             offsetY: -2
           })
+
+          if (this.isSelectMode) {
+            Column() {
+              this.SelectModeBottomBar()
+            }
+            .width("100%")
+            .height(40)
+          }
         }
         .width(StyleConstants.FULL_WIDTH)
         .height(StyleConstants.FULL_HEIGHT)
@@ -596,5 +855,13 @@ struct Collection {
     .height(StyleConstants.FULL_HEIGHT)
     .backgroundColor($r('app.color.page_background'))
     .expandSafeArea()
+    .bindSheet($$this.showPlayList, this.PlayList(), {
+      showClose: false,
+      detents: [SheetSize.MEDIUM, SheetSize.LARGE],
+      dragBar: false,
+      scrollSizeMode: ScrollSizeMode.CONTINUOUS,
+      backgroundColor: $r('app.color.playlist_bg'),
+      preferType: SheetType.BOTTOM,
+    })
   }
 }

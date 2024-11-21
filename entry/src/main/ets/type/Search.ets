@@ -1,17 +1,31 @@
 import { SongDetail } from "./Song";
 
-// 搜索结果
-export interface SearchResult {
-  searchQcReminder: null | string;
-  songs: SongDetail[];
+@Observed
+export class SearchResult {
+  searchQcReminder: null | string = null;
+  songs: SongDetail[] = [];
+
+  constructor(result?: SearchResult) {
+    if (result !== undefined) {
+      this.searchQcReminder = result.searchQcReminder;
+      this.songs = result.songs.map(song => new SongDetail(song));
+    }
+  }
 }
 
-export interface SearchResponse {
-  result: SearchResult
-  code: number
+@Observed
+export class SearchResponse {
+  result: SearchResult = new SearchResult();
+  code: number = 0;
+
+  constructor(response?: SearchResponse) {
+    if (response !== undefined) {
+      this.result = new SearchResult(response.result);
+      this.code = response.code;
+    }
+  }
 }
 
-// 搜索类型枚举
 export enum SearchType {
   SINGLE = 1,
   ALBUM = 10,
@@ -25,8 +39,7 @@ export enum SearchType {
   COMPREHENSIVE = 1018
 }
 
-// 搜索参数
-export interface SearchParams {
+export interface  SearchParams {
   keywords: string;
   limit?: number;
   offset?: number;

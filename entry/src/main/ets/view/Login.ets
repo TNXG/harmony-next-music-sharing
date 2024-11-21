@@ -1,4 +1,4 @@
-import { anonymous } from "../common/RequestUtil"
+import { getAnonymous } from "../common/RequestUtil"
 import promptAction from '@ohos.promptAction'
 import { StyleConstants } from '../common/Constant'
 import { Account, AccountProfile } from "../type/Account"
@@ -77,6 +77,8 @@ export struct Login {
   @State pcUserAgent: string =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0'
 
+  private anonymous = getAnonymous()
+
   aboutToDisappear() {
     if (this.checkStatusTimer !== -1) {
       clearTimeout(this.checkStatusTimer)
@@ -92,11 +94,11 @@ export struct Login {
 
     try {
       const timestamp = new Date().getTime()
-      const keyRes: QRKeyResponse = await anonymous.get(`/login/qr/key?timestamp=${timestamp}`)
+      const keyRes: QRKeyResponse = await this.anonymous.get(`/login/qr/key?timestamp=${timestamp}`)
       const key = keyRes.data.data.unikey
 
       const qrRes: QRImageResponse =
-        await anonymous.get(`/login/qr/create?key=${key}&qrimg=true&timestamp=${timestamp}`)
+        await this.anonymous.get(`/login/qr/create?key=${key}&qrimg=true&timestamp=${timestamp}`)
       this.qrImg = qrRes.data.data.qrimg
 
       this.checkLoginStatus(key)
@@ -110,7 +112,7 @@ export struct Login {
   async checkLoginStatus(key: string) {
     try {
       const timestamp = new Date().getTime()
-      const res: LoginStatusResponse = await anonymous.get(`/login/qr/check?key=${key}&timestamp=${timestamp}`)
+      const res: LoginStatusResponse = await this.anonymous.get(`/login/qr/check?key=${key}&timestamp=${timestamp}`)
       const status = res.data
 
       if (status.code === 800) {
@@ -160,7 +162,7 @@ export struct Login {
   async getLoginStatus(cookie: string) {
     try {
       const timestamp = new Date().getTime()
-      const res: LoginResponse = await anonymous.post('/login/status', { cookie } as StatusQuery, {
+      const res: LoginResponse = await this.anonymous.post('/login/status', { cookie } as StatusQuery, {
         params: { timestamp }
       })
 

@@ -50,7 +50,7 @@ export struct PersonalFMCard {
       .width(StyleConstants.FULL_WIDTH)
       .height(StyleConstants.FULL_HEIGHT)
     }
-    .width("48%")
+    .width("100%")
     .height(100)
     .clip(true)
     .borderRadius(16)
