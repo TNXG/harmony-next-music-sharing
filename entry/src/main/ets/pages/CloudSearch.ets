@@ -3,11 +3,12 @@ import { SongListCard } from '../component/SongListCard'
 import { SongDetail } from '../type/Song'
 import { cloudSearch as search } from "../api/Search"
 import { globalPlaylist } from '../common/GlobalPlayListManager'
-import { TrackAndPrivilege, Track, Privilege } from '../type/Playlist'
+import { TrackAndPrivilege, Track, Privilege, Playlist } from '../type/Playlist'
 import { Artist } from '../type/Toplist'
 import { cover } from '../common/APIHelper'
 import { PlaylistSelector } from '../component/PlaylistSelector'
 import { collectSong } from '../api/Song'
+import { PlaylistCard } from '../component/PlayListCard'
 
 enum SearchType {
   SINGLE = 1,
@@ -26,6 +27,7 @@ interface TabItem {
 struct CloudSearch {
   @State searchText: string = ''
   @State searchResults: SongDetail[] = []
+  @State playlistResults: Playlist[] = []
   @State isLoading: boolean = false
   @State isLoadingMore: boolean = false
   @State showResults: boolean = false
@@ -39,7 +41,7 @@ struct CloudSearch {
     { name: '单曲', type: SearchType.SINGLE },
   // { name: '专辑', type: SearchType.ALBUM },
   // { name: '歌手', type: SearchType.ARTIST },
-  // { name: '歌单', type: SearchType.PLAYLIST }
+    { name: '歌单', type: SearchType.PLAYLIST }
   ]
   @State showPlayListSelector: boolean = false
   private nowSelected: number | string = 0;
@@ -102,6 +104,7 @@ struct CloudSearch {
   async handleSearch(loadMore: boolean = false) {
     if (!this.searchText.trim()) {
       this.searchResults = []
+      this.playlistResults = []
       this.showResults = false
       return
     }
@@ -126,36 +129,45 @@ struct CloudSearch {
         type: this.tabs[this.currentTab].type
       })
 
-      if (result?.result?.songs) {
-        const newSongs = result.result.songs
-
-        // 检查是否还有更多数据
-        this.hasMore = newSongs.length === this.pageSize
-
-        animateTo({
-          duration: 300,
-          curve: Curve.EaseOut
-        }, () => {
-          if (loadMore) {
-            this.searchResults = [...this.searchResults, ...newSongs]
-          } else {
-            this.searchResults = newSongs
-          }
-          this.showResults = true
-        })
-
-        // 更新offset
-        this.offsetValue += 1
-      } else {
-        if (!loadMore) {
-          this.searchResults = []
+      if (this.tabs[this.currentTab].type === SearchType.SINGLE) {
+        if (result?.result?.songs) {
+          const newSongs = result.result.songs
+          this.hasMore = newSongs.length === this.pageSize
+          animateTo({
+            duration: 300,
+            curve: Curve.EaseOut
+          }, () => {
+            if (loadMore) {
+              this.searchResults = [...this.searchResults, ...newSongs]
+            } else {
+              this.searchResults = newSongs
+            }
+            this.showResults = true
+          })
         }
-        this.hasMore = false
-        this.showResults = true
+      } else if (this.tabs[this.currentTab].type === SearchType.PLAYLIST) {
+        if (result?.result?.playlists) {
+          const newPlaylists = result.result.playlists
+          this.hasMore = newPlaylists.length === this.pageSize
+          animateTo({
+            duration: 300,
+            curve: Curve.EaseOut
+          }, () => {
+            if (loadMore) {
+              this.playlistResults = [...this.playlistResults, ...newPlaylists]
+            } else {
+              this.playlistResults = newPlaylists
+            }
+            this.showResults = true
+          })
+        }
       }
+
+      this.offsetValue += 1
     } catch (error) {
       if (!loadMore) {
         this.searchResults = []
+        this.playlistResults = []
       }
       this.showResults = true
       this.hasMore = false
@@ -167,6 +179,7 @@ struct CloudSearch {
       }
     }
   }
+
 
   @Builder
   SearchHeader() {
@@ -199,10 +212,95 @@ struct CloudSearch {
         top: 8,
         bottom: 8
       })
+
+      // Button-style Tabs
+      Row() {
+        Row() {
+          ForEach(this.tabs, (tab: TabItem, index: number) => {
+            Text(tab.name)
+              .fontSize(14)
+              .fontWeight(FontWeight.Medium)
+              .height(32)
+              .padding({ left: 16, right: 16 })
+              .backgroundColor(this.currentTab === index ? $r('app.color.primary_blue') : Color.Transparent)
+              .borderRadius(16)
+              .fontColor(this.currentTab === index ? Color.White : $r('app.color.text_secondary'))
+              .textAlign(TextAlign.Center)
+              .margin({ right: index === this.tabs.length - 1 ? 0 : 8 })
+              .onClick(() => {
+                if (this.currentTab !== index) {
+                  animateTo({ duration: 250, curve: Curve.EaseOut }, () => {
+                    this.currentTab = index
+                    this.handleSearch()
+                  })
+                }
+              })
+          })
+        }
+        .padding(4)
+        .borderRadius(20)
+        .backgroundColor($r('app.color.button_ghost_background'))
+      }
+      .width('100%')
+      .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+      .justifyContent(FlexAlign.Start)
+
+      // Tab Content
+      if (this.currentTab === 0) {
+        this.SearchResults()
+      } else {
+        this.PlaylistResults()
+      }
     }
     .width('100%')
     .backgroundColor($r('app.color.card_background'))
     .expandSafeArea()
+  }
+
+
+  @Builder
+  PlaylistResults() {
+    if (!this.isLoading && this.showResults && this.playlistResults?.length > 0) {
+      List({ space: 4 }) {
+        ListItem() {
+          Text('歌单')
+            .fontSize(14)
+            .fontColor($r('app.color.text_secondary'))
+            .padding({ left: 16, top: 8, bottom: 8 })
+        }
+
+        ForEach(this.playlistResults, (playlist: Playlist, index: number) => {
+          ListItem() {
+            PlaylistCard({
+              count: playlist.trackCount,
+              coverUrl: playlist.coverImgUrl,
+              title: playlist.name,
+              creator: playlist.creator.nickname,
+              index: index
+            })
+              .onClick(() => {
+                AppStorage.setOrCreate("CollectionId", playlist.id);
+                router.pushUrl({
+                  url: "pages/Collection",
+                });
+              })
+          }
+        })
+
+        ListItem() {
+          this.LoadMoreIndicator()
+        }
+      }
+      .scrollBar(BarState.Off)
+      .width('100%')
+      .layoutWeight(1)
+      .onReachEnd(() => {
+        if (this.hasMore && !this.isLoadingMore) {
+          this.handleSearch(true)
+        }
+      })
+      .expandSafeArea()
+    }
   }
 
   @Builder
@@ -342,14 +440,11 @@ struct CloudSearch {
   build() {
     Stack() {
       Column() {
-        // 搜索头部和标签栏
         this.SearchHeader()
 
-        // 主内容区域
         Stack() {
           this.EmptyState()
           this.LoadingState()
-          this.SearchResults()
         }
         .layoutWeight(1)
       }

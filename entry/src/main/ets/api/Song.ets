@@ -16,7 +16,7 @@ export async function getSongUrl(
   level = PreferencesUtil.get<string>("defaultLevel") ?? "standard"
 ): Promise<SongUrlResponse> {
   const request = getRequest()
-  const response: AxiosResponse = await request.post(`/song/download/url/v1?id=${id}&level=${level}`);
+  const response: AxiosResponse = await request.post(`/song/url/v1?id=${id}&level=${level}`);
   return response.data as SongUrlResponse;
 }
 

@@ -1,14 +1,17 @@
 import { SongDetail } from "./Song";
+import { Playlist } from "./Playlist";
 
 @Observed
 export class SearchResult {
   searchQcReminder: null | string = null;
   songs: SongDetail[] = [];
+  playlists: Playlist[] = []
 
   constructor(result?: SearchResult) {
     if (result !== undefined) {
       this.searchQcReminder = result.searchQcReminder;
       this.songs = result.songs.map(song => new SongDetail(song));
+      this.playlists = result.playlists.map(playlist=> new Playlist(playlist))
     }
   }
 }

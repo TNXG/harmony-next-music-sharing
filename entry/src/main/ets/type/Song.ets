@@ -402,12 +402,12 @@ export class SongDetailResponse {
 
 @Observed
 export class SongUrlResponse {
-  data: SongUrl = new SongUrl()
+  data: SongUrl[] = []
   code: number = 0;
 
   constructor(response?: SongUrlResponse) {
     if (response !== undefined) {
-      this.data = response.data
+      this.data = response.data.map(song => new SongUrl(song));
       this.code = response.code;
     }
   }

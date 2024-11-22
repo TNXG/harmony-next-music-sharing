@@ -1,6 +1,7 @@
 import { AbilityConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { promptAction, window } from '@kit.ArkUI';
+import { fileIo as fs } from '@kit.CoreFileKit';
 
 import app from '@system.app';
 import { PreferencesUtil } from '../common/PreferenceUtil';
@@ -77,6 +78,18 @@ async function getLyric (id: number| string) {
 // 记录当前正在缓存的歌曲ID
 let currentCachingId: string | number | null = null;
 
+async function checkCacheFileExists(cache: SongCache): Promise<boolean> {
+  if (!cache || !cache.path) return false;
+  try {
+    await fs.access(cache.path);
+    return true;
+  } catch (e) {
+    // 如果文件不存在，删除无效的缓存记录
+    cacheManager.remove(`${cache.id}_${cache.level}`);
+    return false;
+  }
+}
+
 async function cacheNextSong() {
   try {
     const nextTrack = globalPlaylist.getNext()
@@ -86,13 +99,20 @@ async function cacheNextSong() {
     const confirmLevel = getSupportedQuality(nextTrack.privilege.dlLevel as QualityLevel, level)
     const cache = cacheManager.get(`${nextTrack.track.id}_${confirmLevel}`)
 
-    if (cache || nextTrack.privilege.st < 0) {
+    // 增加缓存文件存在性检查
+    if (cache) {
+      const exists = await checkCacheFileExists(cache);
+      if (exists) return;
+      // 如果文件不存在，继续执行下载逻辑
+    }
+
+    if (nextTrack.privilege.st < 0) {
       return
     }
 
     currentCachingId = nextTrack.track.id;
 
-    const url = (await getSongUrl(nextTrack.track.id)).data.url
+    const url = (await getSongUrl(nextTrack.track.id)).data[0].url
     if (!url) return
 
     let fileName = url.split("/").pop() ?? `${util.generateRandomUUID()}`
@@ -127,9 +147,7 @@ async function cacheNextSong() {
 async function startPlaySong(song: ChangeSong) {
   const track = song.song
   try {
-    // 如果当前正在缓存这首歌，等待缓存完成
     if (currentCachingId === track.track.id) {
-      // 等待当前缓存任务完成
       await new Promise<boolean>(resolve => {
         const checkCache = setInterval(() => {
           if (!currentCachingId || currentCachingId !== track.track.id) {
@@ -149,6 +167,13 @@ async function startPlaySong(song: ChangeSong) {
     EventBus.send("LyricsUpdated")
 
     if (cache) {
+      // 增加缓存文件存在性检查
+      const exists = await checkCacheFileExists(cache);
+      if (!exists) {
+        // 如果缓存文件不存在，走下载逻辑
+        return await handleSongDownload(track, song.pause, confirmLevel, autoCache);
+      }
+
       await avPlayerManager.playByPath(cache.path, song.pause)
       avPlayerManager.clearListener('onDurationChange')
       avPlayerManager.addListener('onDurationChange', async (duration: number) => {
@@ -165,67 +190,8 @@ async function startPlaySong(song: ChangeSong) {
           cacheNextSong()
         }
       })
-      // await backgroundRunningManager.stopBackgroundRunning();
-      // await backgroundRunningManager.startBackgroundRunning();
     } else {
-      if (track.privilege.st < 0) {
-       if (globalPlaylist.getLastAction() == PlayAction.NEXT) {
-         globalPlaylist.playNext()
-       } else {
-         globalPlaylist.playPrevious()
-       }
-        return
-      }
-
-      // 直接下载当前歌曲
-      currentCachingId = track.track.id;
-      const url = (await getSongUrl(track.track.id)).data.url
-      let fileName = url.split("/").pop() ?? `${util.generateRandomUUID()}`
-      const index = fileName.indexOf("?")
-      if (index > 0) {
-        fileName = fileName.substring(0, index)
-      }
-      const path = await downloadManager.downloadFile({
-        url,
-        fileName
-      })
-
-      currentCachingId = null;
-
-      if (path) {
-        await avPlayerManager.playByPath(path,song.pause)
-        avPlayerManager.clearListener('onDurationChange')
-        avPlayerManager.addListener('onDurationChange', async (duration: number) => {
-          await avPlayerManager.updateAVMetadata({
-            assetId: `track-${track.track.id}`,
-            duration: duration,
-            title: track.track.name,
-            mediaImage: cover(track.track.al.picUrl, 512),
-            artist: track.track.ar.map(item => item.name).join("/")
-          })
-          AppStorage.setOrCreate("Track", track)
-          getLyric(track.track.id)
-          if (autoCache) {
-            cacheNextSong()
-          }
-        })
-        // await backgroundRunningManager.stopBackgroundRunning();
-        // await backgroundRunningManager.startBackgroundRunning();
-        const cache = new SongCache()
-        cache.id = track.track.id
-        cache.level = confirmLevel
-        cache.name = track.track.name
-        cache.path = path
-        cache.coverImgUrl = track.track.al.picUrl
-        cache.artist = track.track.ar.map(item => item.name)
-
-        cacheManager.set(`${track.track.id}_${confirmLevel}`, cache)
-      } else {
-        promptAction.showToast({
-          message: "音乐资源获取失败!"
-        })
-        return
-      }
+      await handleSongDownload(track, song.pause, confirmLevel, autoCache);
     }
 
     const isLike = await checkIfLoved(track.track.id)
@@ -239,6 +205,79 @@ async function startPlaySong(song: ChangeSong) {
 
   } catch (e) {
     Logger.warn("RequestUtil", e.message)
+    promptAction.showToast({
+      message: "音乐资源获取失败!"
+    })
+  }
+}
+
+// 抽取下载和播放逻辑为独立函数
+async function handleSongDownload(
+  track: TrackAndPrivilege,
+  pause: number,
+  confirmLevel: QualityLevel,
+  autoCache: boolean
+) {
+  if (track.privilege.st < 0) {
+    if (globalPlaylist.getLastAction() == PlayAction.NEXT) {
+      globalPlaylist.playNext()
+    } else {
+      globalPlaylist.playPrevious()
+    }
+    return
+  }
+
+  currentCachingId = track.track.id;
+  const url = (await getSongUrl(track.track.id)).data[0].url
+  if (!url) {
+    currentCachingId = null;
+    promptAction.showToast({
+      message: "音乐资源获取失败!"
+    })
+    return;
+  }
+
+  let fileName = url.split("/").pop() ?? `${util.generateRandomUUID()}`
+  const index = fileName.indexOf("?")
+  if (index > 0) {
+    fileName = fileName.substring(0, index)
+  }
+
+  const path = await downloadManager.downloadFile({
+    url,
+    fileName
+  })
+
+  currentCachingId = null;
+
+  if (path) {
+    await avPlayerManager.playByPath(path, pause)
+    avPlayerManager.clearListener('onDurationChange')
+    avPlayerManager.addListener('onDurationChange', async (duration: number) => {
+      await avPlayerManager.updateAVMetadata({
+        assetId: `track-${track.track.id}`,
+        duration: duration,
+        title: track.track.name,
+        mediaImage: cover(track.track.al.picUrl, 512),
+        artist: track.track.ar.map(item => item.name).join("/")
+      })
+      AppStorage.setOrCreate("Track", track)
+      getLyric(track.track.id)
+      if (autoCache) {
+        cacheNextSong()
+      }
+    })
+
+    const cache = new SongCache()
+    cache.id = track.track.id
+    cache.level = confirmLevel
+    cache.name = track.track.name
+    cache.path = path
+    cache.coverImgUrl = track.track.al.picUrl
+    cache.artist = track.track.ar.map(item => item.name)
+
+    cacheManager.set(`${track.track.id}_${confirmLevel}`, cache)
+  } else {
     promptAction.showToast({
       message: "音乐资源获取失败!"
     })
