@@ -7,7 +7,7 @@ import app from '@system.app';
 import { PreferencesUtil } from '../common/PreferenceUtil';
 import { getToplistAlbum, getToplistArtist } from '../api/Toplist';
 import { getNewAlbumList } from '../api/Album';
-import { getPersonalizedCollection, getPersonalizedFM } from '../api/Personalized';
+import { getPersonalizedCollection } from '../api/Personalized';
 import { AccountProfile } from '../type/Account';
 import Constant from '../common/Constant';
 import Logger from '../common/Logger';
@@ -301,6 +301,10 @@ function cached() {
 }
 
 export default class EntryAbility extends UIAbility {
+
+  private shutdownTimer: number | null = null;
+  private shutdownTime: number | null = null;
+
   async onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): Promise<void> {
     hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onCreate');
     app.setImageRawDataCacheSize(100 * 1024 * 1024) // 设置解码前图片数据内存缓存上限为100MB
@@ -336,20 +340,31 @@ export default class EntryAbility extends UIAbility {
       }
     })
 
+    let playTimer: number | null = null;
+
     EventBus.listen<ChangeSong>('CurrentChange', async (changed) => {
       if (changed !== undefined) {
-        const data = changed.song
+        const data = changed.song;
         // 如果歌曲id并且不是单曲循环模式，则不重复播放
         if (lastTrack && lastTrack.track.id === data.track.id && globalPlaylist.playMode !== PlayMode.SINGLE) {
-          return
+          return;
         }
-        lastTrack = data
-        await avPlayerManager.stop()
-        startPlaySong(changed).then(() => {
-          avPlayerManager.updatePlaybackState()
-        })
+        lastTrack = data;
+        await avPlayerManager.stop();
+
+        // 清除之前的定时器
+        if (playTimer !== null) {
+          clearTimeout(playTimer);
+        }
+
+        // 设置新的定时器
+        playTimer = setTimeout(() => {
+          startPlaySong(changed).then(() => {
+            avPlayerManager.updatePlaybackState();
+          });
+        }, 300);
       }
-    })
+    });
 
     EventBus.listen<void>('ToggleFavorite', async () => {
       const track = globalPlaylist.getCurrentSong()
@@ -391,11 +406,73 @@ export default class EntryAbility extends UIAbility {
       }
     })
 
+
+    // 添加定时关闭事件监听
+    EventBus.listen<number | null>('SetTimer', async (minutes) => {
+      // 如果传入 null 或 0，取消定时
+      if (!minutes) {
+        if (this.shutdownTimer) {
+          clearTimeout(this.shutdownTimer);
+          this.shutdownTimer = null;
+        }
+        this.shutdownTime = null;
+        EventBus.send('TimerUpdated', null);
+        promptAction.showToast({
+          message: "已取消定时关闭",
+          duration: 2000,
+          bottom: 64
+        });
+        return;
+      }
+
+      // 清除可能存在的旧定时器
+      if (this.shutdownTimer) {
+        clearTimeout(this.shutdownTimer);
+      }
+
+      // 设置新的定时器
+      const timeInMs = minutes * 60 * 1000;
+      this.shutdownTime = Date.now() + timeInMs;
+
+      this.shutdownTimer = setTimeout(async () => {
+        // 停止播放
+        await avPlayerManager.pause();
+        // 更新状态
+        this.shutdownTimer = null;
+        this.shutdownTime = null;
+        EventBus.send('TimerUpdated', null);
+        // 发送通知
+        promptAction.showToast({
+          message: "定时关闭已执行",
+          duration: 2000,
+          bottom: 64
+        });
+      }, timeInMs);
+
+      // 通知 UI 更新定时状态
+      EventBus.send('TimerUpdated', this.shutdownTime);
+
+      // 显示设置成功提示
+      promptAction.showToast({
+        message: `已设置 ${minutes} 分钟后关闭`,
+      });
+    });
+
+    // 添加查询定时状态事件监听
+    EventBus.listen<void>('GetTimerStatus', () => {
+      EventBus.send('TimerUpdated', this.shutdownTime);
+    });
+
     await globalPlaylist.loadPersistedData()
   }
 
   onDestroy(): void {
     hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onDestroy');
+    // 清理定时器
+    if (this.shutdownTimer) {
+      clearTimeout(this.shutdownTimer);
+      this.shutdownTimer = null;
+    }
   }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {

@@ -432,7 +432,7 @@ class AVPlayerManager {
     const player = await media.createAVPlayer();
     this.setupAudioInterrupt(player);
 
-    player.on('stateChange', (state: string) => {
+    player.on('stateChange', async (state: string) => {
       this.triggerStateChange(state);
 
       switch (state) {
@@ -465,7 +465,7 @@ class AVPlayerManager {
           this.triggerPause();
           break;
         case 'completed':
-          if (globalPlaylist.playNext()) {
+          if (await globalPlaylist.playNext()) {
             return;
           }
           this.isPlayingBeforeInterrupt = false;

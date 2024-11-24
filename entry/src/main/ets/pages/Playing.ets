@@ -1,15 +1,16 @@
 import { BreakPointType } from "../common/BreakpointSystem"
 import { BreakpointConstants } from "../common/Constant"
-import { TrackAndPrivilege } from '../type/Playlist'
-import { globalPlaylist, PlayMode } from '../common/GlobalPlayListManager'
+import { Privilege, Track, TrackAndPrivilege } from '../type/Playlist'
+import { globalPlaylist, PlayMode, PlayType } from '../common/GlobalPlayListManager'
 import { cover } from '../common/APIHelper'
 import { avPlayerManager } from '../common/AVPlayerManager'
 import { EventBus } from '../common/EventBus'
 import { PlayList } from '../component/PlayList'
 import { LyricView } from '../component/LyricDisplay'
 import { PlaylistSelector } from '../component/PlaylistSelector'
-import { collectSong } from '../api/Song'
+import { collectSong, intelligence } from '../api/Song'
 import { promptAction } from '@kit.ArkUI'
+import { TimerSelector } from '../component/TimerSelector'
 
 @Entry
 @Component
@@ -24,12 +25,13 @@ struct Playing {
   @State playMode: PlayMode = globalPlaylist.getPlayMode()
   @State showPlaylist: boolean = false
   @StorageLink("Track") track: TrackAndPrivilege | null = null
+  @StorageLink("CollectionId") collectionId: string | number | null = null
   private updateTimer: number = -1
   private playerManager = avPlayerManager
   @State appearItems: number[] = []
   @State isLoading: boolean = false
   @State loadAll: boolean = false
-  @State selector: boolean = false
+  @State selector: "playlist" | "playlistSelector" | "timeSelector" = "playlist"
 
   @Builder
   PlayList() {
@@ -39,7 +41,7 @@ struct Playing {
           await collectSong(id, [this.track?.track.id!])
           promptAction.showToast({ message: "已添加到收藏夹" })
           this.showPlaylist = false;
-          this.selector = false;
+          this.selector = "playlist"
         }
       })
     }
@@ -47,6 +49,15 @@ struct Playing {
     .height("100%")
     .backgroundColor($r('app.color.playlist_bg'))
     .layoutWeight(1)
+  }
+
+  @Builder
+  Timer() {
+    Column() {
+      TimerSelector()
+    }
+    .expandSafeArea()
+    .backgroundColor($r('app.color.playlist_bg'))
   }
 
   @Builder
@@ -286,8 +297,37 @@ struct Playing {
         EventBus.send("ToggleFavorite")
       })
 
+      if (this.collectionId) {
+        Button({ type: ButtonType.Circle }) {
+          Image($r('app.media.ic_discover_fill'))
+            .width(28)
+            .height(28)
+            .fillColor(Color.White)
+        }
+        .width(44)
+        .height(44)
+        .margin(8)
+        .backgroundColor('rgba(255, 255, 255, 0.1)')
+        .onClick(async () => {
+          // 心动模式
+          promptAction.showToast({ message: "正在进入心动模式~" })
+          const intelligenceSongs = await intelligence(this.collectionId!, this.track!.track.id)
+          globalPlaylist.overwrite(intelligenceSongs.data.map(item => {
+            const trackAndPrivilege = new TrackAndPrivilege()
+            trackAndPrivilege.track = item.songInfo as ESObject as Track
+            trackAndPrivilege.privilege = item.songInfo.privilege as ESObject as Privilege
+            return trackAndPrivilege
+          }))
+          animateTo({ duration: 0 }, () => {
+            AppStorage.setOrCreate("Track", globalPlaylist.getCurrentSong())
+          })
+          globalPlaylist.setCurrentIndex(0)
+          promptAction.showToast({ message: "成功进入心动模式~" })
+        })
+      }
+
       Button({ type: ButtonType.Circle }) {
-        Image($r('app.media.ic_star'))
+        Image($r('app.media.ic_more'))
           .width(28)
           .height(28)
           .fillColor(Color.White)
@@ -296,10 +336,22 @@ struct Playing {
       .height(44)
       .margin(8)
       .backgroundColor('rgba(255, 255, 255, 0.1)')
-      .onClick(() => {
-        this.selector = true;
-        this.showPlaylist = true;
-      })
+      .bindMenu([
+        {
+          value: '收藏该歌曲',
+          action: () => {
+            this.selector = "playlistSelector"
+            this.showPlaylist = true;
+          }
+        },
+        {
+          value: '定时关闭',
+          action: () => {
+            this.selector = "timeSelector"
+            this.showPlaylist = true;
+          }
+        },
+      ])
 
       Button({ type: ButtonType.Circle }) {
         Image($r('app.media.ic_list'))
@@ -312,7 +364,11 @@ struct Playing {
       .margin(8)
       .backgroundColor('rgba(255, 255, 255, 0.1)')
       .onClick(() => {
-        this.selector = false;
+        if (globalPlaylist.playType == PlayType.PERSONAL_FM) {
+          promptAction.showToast({ message: "当前模式下需要保留一点神秘感哦！" })
+          return
+        }
+        this.selector = "playlist"
         this.showPlaylist = true;
       })
     }
@@ -333,6 +389,17 @@ struct Playing {
         return $r('app.media.ic_repeat_1')
       default:
         return $r('app.media.ic_order_play')
+    }
+  }
+
+  @Builder
+  sheet() {
+    if (this.selector === "playlist") {
+      this.PlayListBuilder()
+    } else if (this.selector === "playlistSelector") {
+      this.PlayList()
+    } else if (this.selector === "timeSelector") {
+      this.Timer()
     }
   }
 
@@ -442,16 +509,17 @@ struct Playing {
     .width('100%')
     .height('100%')
     .expandSafeArea()
-    .bindSheet($$this.showPlaylist, this.selector ? this.PlayList() : this.PlayListBuilder(), {
+    .bindSheet($$this.showPlaylist, this.sheet , {
       showClose: false,
-      detents: [SheetSize.MEDIUM, SheetSize.LARGE],
+      height: this.selector == "timeSelector" ? SheetSize.FIT_CONTENT : SheetSize.MEDIUM,
+      // detents: [SheetSize.MEDIUM, SheetSize.LARGE],
       dragBar: false,
       scrollSizeMode: ScrollSizeMode.CONTINUOUS,
       preferType: SheetType.BOTTOM,
       backgroundColor: $r('app.color.playlist_bg'),
       onWillDismiss: () => {
         this.showPlaylist = false;
-        this.selector = false;
+        this.selector = "playlist"
       }
     })
   }

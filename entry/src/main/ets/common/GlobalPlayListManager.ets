@@ -1,6 +1,11 @@
-import { TrackAndPrivilege } from "../type/Playlist"
+import { Privilege, TrackAndPrivilege, Track } from "../type/Playlist"
 import { EventBus } from "./EventBus"
 import { PreferencesUtil } from "./PreferenceUtil"
+import { promptAction, router } from "@kit.ArkUI"
+import { getPersonalizedFM } from "../api/Personalized"
+import Logger from "./Logger"
+
+const TAG= "GlobalPlayListManager"
 
 export interface ChangeSong {
   song: TrackAndPrivilege,
@@ -10,7 +15,8 @@ export interface ChangeSong {
 enum STORAGE_KEYS {
   PLAY_MODE = 'playlist_play_mode',
   PLAYLIST = 'playlist_tracks',
-  CURRENT_INDEX = 'current_index'
+  CURRENT_INDEX = 'current_index',
+  TYPE = 'play_type'
 }
 
 export interface PlaylistChangeEvent {
@@ -38,6 +44,11 @@ export enum PlayAction {
   PRE = "PRE"
 }
 
+export enum PlayType {
+  NORMAL = 0, // 普通播放
+  PERSONAL_FM = 1, // 私人FM
+}
+
 class GlobalPlaylist {
   private static instance: GlobalPlaylist | null = null
   private playlist: Array<TrackAndPrivilege> = []
@@ -49,36 +60,66 @@ class GlobalPlaylist {
 
   private lastAction = PlayAction.NEXT
 
+  private _playType: PlayType = PlayType.NORMAL
+  private isLoadingFM: boolean = false
+
   private constructor() {
   }
 
   public async loadPersistedData() {
     if (!PreferencesUtil.isInitialized()) {
-      return
+      return;
     }
 
-    const persistedMode = await PreferencesUtil.getAsync<string>(STORAGE_KEYS.PLAY_MODE, PlayMode.LOOP)
-    this._playMode = persistedMode as PlayMode
-    EventBus.send("PlayModeSet", this._playMode)
+    // 加载播放模式
+    const persistedMode = await PreferencesUtil.getAsync<string>(STORAGE_KEYS.PLAY_MODE, PlayMode.LOOP);
+    this._playMode = persistedMode as PlayMode;
+    EventBus.send("PlayModeSet", this._playMode);
 
-    const persistedPlaylist = await PreferencesUtil.getAsync<string>(STORAGE_KEYS.PLAYLIST, '[]')
-    try {
-      this.playlist = JSON.parse(persistedPlaylist)
-    } catch (e) {
-      this.playlist = []
+    // // 加载播放类型 暂时不做任何动作
+    // const playType = await PreferencesUtil.getAsync<number>(STORAGE_KEYS.TYPE, PlayType.NORMAL);
+    // this._playType = playType as PlayType;
+    // EventBus.send("PlayTypeChange", this._playType);
+
+    // 根据播放类型决定如何加载播放列表
+    if (this._playType === PlayType.PERSONAL_FM) {
+      // // 提示用户
+      // promptAction.showToast({ message: "已进入私人FM模式" })
+      // // FM模式下，直接加载新的FM歌曲
+      // await this.startPersonalFM()
+      // // // FM模式强制使用顺序播放
+      // // this._playMode = PlayMode.SEQUENCE;
+      // // EventBus.send("PlayModeSet", this._playMode);
+      // 暂时不做然后动作
+    } else {
+      // 普通模式，加载持久化的播放列表
+      const persistedPlaylist = await PreferencesUtil.getAsync<string>(STORAGE_KEYS.PLAYLIST, '[]');
+      try {
+        this.playlist = JSON.parse(persistedPlaylist);
+      } catch (e) {
+        Logger.error(TAG, `Failed to parse persisted playlist: ${e.message}`);
+        this.playlist = [];
+      }
     }
 
-    this._currentIndex = PreferencesUtil.get<number>(STORAGE_KEYS.CURRENT_INDEX, -1)
+    // 加载当前播放索引
+    this._currentIndex = await PreferencesUtil.getAsync<number>(STORAGE_KEYS.CURRENT_INDEX, -1);
 
-    if (this._playMode === PlayMode.RANDOM) {
-      this.generateRandomQueue()
+    // 随机模式下生成随机队列
+    if (this._playMode === PlayMode.RANDOM && this._playType !== PlayType.PERSONAL_FM) {
+      this.generateRandomQueue();
     }
 
+    // 如果播放列表非空，发送播放列表变更事件
     if (this.playlist.length > 0) {
-      this.emitPlaylistChange(PlaylistChangeType.OVERWRITE)
+      this.emitPlaylistChange(PlaylistChangeType.OVERWRITE);
     }
 
-    this.debouncedEmitCurrentChange(this.getCurrentSong(), 1)
+    // 触发当前歌曲变更事件
+    this.debouncedEmitCurrentChange(this.getCurrentSong(), 1);
+
+    Logger.info(TAG, `Persisted data loaded - Mode: ${this._playMode}, Type: ${this._playType}, ` +
+      `Playlist Length: ${this.playlist.length}, Current Index: ${this._currentIndex}`);
   }
 
   public static getInstance(): GlobalPlaylist {
@@ -259,22 +300,124 @@ class GlobalPlaylist {
   }
 
   public clear(): void {
-    this.playlist = []
-    this.setCurrentIndex(-1)
-    this.randomQueue = []
-    this.emitPlaylistChange(PlaylistChangeType.CLEAR)
-    PreferencesUtil.putAsync(STORAGE_KEYS.PLAYLIST, '[]')
-    PreferencesUtil.putAsync(STORAGE_KEYS.CURRENT_INDEX, -1)
+    if (this._playType === PlayType.PERSONAL_FM) {
+      // FM模式下改为停止FM
+      this.stopPersonalFM();
+      return;
+    }
+
+    this.playlist = [];
+    this.setCurrentIndex(-1);
+    this.randomQueue = [];
+    this.emitPlaylistChange(PlaylistChangeType.CLEAR);
+    PreferencesUtil.putAsync(STORAGE_KEYS.PLAYLIST, '[]');
+    PreferencesUtil.putAsync(STORAGE_KEYS.CURRENT_INDEX, -1);
   }
 
-  public overwrite(songs: Array<TrackAndPrivilege>): void {
-    this.playlist = songs
-    this.setCurrentIndex(songs.length > 0 ? 0 : -1)
-    if (this._playMode === PlayMode.RANDOM) {
-      this.generateRandomQueue()
-    }
-    this.emitPlaylistChange(PlaylistChangeType.OVERWRITE)
+  // 获取播放类型
+  public get playType(): PlayType {
+    return this._playType;
   }
+
+  // 设置播放类型
+  private async setPlayType(type: PlayType): Promise<void> {
+    this._playType = type;
+    PreferencesUtil.putAsync(STORAGE_KEYS.TYPE, type);
+
+    // 如果切换到FM模式，立即加载FM歌曲
+    if (type === PlayType.PERSONAL_FM) {
+      await this.loadFMSongs();
+    }
+
+    EventBus.send("PlayTypeChange", type);
+  }
+
+  // 开启私人FM模式
+  public async startPersonalFM(): Promise<void> {
+    if (this._playType === PlayType.PERSONAL_FM) {
+      return;
+    }
+    promptAction.showToast({ message: "已进入私人FM模式" })
+
+    // 清空当前播放列表
+    this.clear();
+    await this.setPlayType(PlayType.PERSONAL_FM);
+    // // 强制设置为顺序播放
+    // this.setPlayMode(PlayMode.SEQUENCE);
+
+    animateTo({ duration: 0 }, () => {
+      AppStorage.setOrCreate("Track", globalPlaylist.getCurrentSong())
+    })
+    globalPlaylist.setCurrentIndex(0)
+    router.pushUrl({ url: "pages/Playing" })
+  }
+
+  // 退出私人FM模式
+  public async stopPersonalFM(): Promise<void> {
+    if (this._playType !== PlayType.PERSONAL_FM) {
+      return;
+    }
+
+    this.clear();
+    await this.setPlayType(PlayType.NORMAL);
+  }
+
+  // 加载FM歌曲
+  private async loadFMSongs(): Promise<void> {
+    if (this.isLoadingFM || this._playType !== PlayType.PERSONAL_FM) {
+      return;
+    }
+
+    try {
+      this.isLoadingFM = true;
+      const response = await getPersonalizedFM();
+      if (response?.data) {
+        const fmSongs = response.data.map(song => {
+          const track = new TrackAndPrivilege();
+          track.track = song as ESObject as Track;
+          track.privilege = song.privilege as ESObject as Privilege;
+          return track;
+        });
+
+        // 添加到当前播放列表末尾
+        this.playlist.push(...fmSongs);
+        this.emitPlaylistChange(PlaylistChangeType.ADD);
+      }
+    } catch (error) {
+      Logger.error(TAG, `Failed to load FM songs: ${error}`);
+    } finally {
+      this.isLoadingFM = false;
+    }
+  }
+
+  // 检查是否需要加载更多FM歌曲
+  private async checkAndLoadMoreFM(): Promise<void> {
+    if (this._playType !== PlayType.PERSONAL_FM) {
+      return;
+    }
+
+    const remainingSongs = this.playlist.length - (this.getCurrentIndexValue() + 1);
+    if (remainingSongs <= 1) {  // 当剩余歌曲少于等于1首时，加载更多
+      await this.loadFMSongs();
+    }
+  }
+
+  public async overwrite(songs: Array<TrackAndPrivilege>, index = 0): Promise<void> {
+    // 如果是FM模式，先退出并提示
+    if (this._playType === PlayType.PERSONAL_FM) {
+      await this.stopPersonalFM();
+      promptAction.showToast({
+        message: '已退出私人FM模式' });
+    }
+
+    this.playlist = songs;
+    this.setCurrentIndex(songs.length > index ? index : -1);
+    if (this._playMode === PlayMode.RANDOM) {
+      this.generateRandomQueue();
+    }
+    this.emitPlaylistChange(PlaylistChangeType.OVERWRITE);
+  }
+
 
   public get length(): number {
     return this.playlist.length
@@ -326,21 +469,27 @@ class GlobalPlaylist {
     return this.playlist[currentIndex]
   }
 
-  public playNext(): TrackAndPrivilege | undefined {
+  public async playNext(): Promise<TrackAndPrivilege | undefined> {
     if (this.playlist.length === 0) {
-      return undefined
+      return undefined;
     }
+
+    if (this._playType === PlayType.PERSONAL_FM) {
+      await this.checkAndLoadMoreFM();
+    }
+
     if (this.getCurrentIndexValue() === -1) {
-      this.setCurrentIndex(0)
+      this.setCurrentIndex(0);
     } else {
-      const nextIndex = this.getNextIndex()
+      const nextIndex = this.getNextIndex();
       if (nextIndex === -1) {
-        return undefined
+        return undefined;
       }
-      this.setCurrentIndex(nextIndex)
+      this.setCurrentIndex(nextIndex);
     }
-    this.lastAction = PlayAction.NEXT
-    return this.getCurrentSong()
+
+    this.lastAction = PlayAction.NEXT;
+    return this.getCurrentSong();
   }
 
   public playPrevious(): TrackAndPrivilege | undefined {
@@ -386,12 +535,13 @@ class GlobalPlaylist {
 
   public destroy(): void {
     if (this.debounceTimer !== null) {
-      clearTimeout(this.debounceTimer)
-      this.debounceTimer = null
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
     }
-    PreferencesUtil.putAsync(STORAGE_KEYS.PLAY_MODE, this._playMode)
-    PreferencesUtil.putAsync(STORAGE_KEYS.PLAYLIST, JSON.stringify(this.playlist))
-    PreferencesUtil.putAsync(STORAGE_KEYS.CURRENT_INDEX, this._currentIndex)
+    PreferencesUtil.putAsync(STORAGE_KEYS.PLAY_MODE, this._playMode);
+    PreferencesUtil.putAsync(STORAGE_KEYS.PLAYLIST, JSON.stringify(this.playlist));
+    PreferencesUtil.putAsync(STORAGE_KEYS.CURRENT_INDEX, this._currentIndex);
+    PreferencesUtil.putAsync(STORAGE_KEYS.TYPE, this._playType);
   }
 
   public isExist(song: TrackAndPrivilege): boolean {

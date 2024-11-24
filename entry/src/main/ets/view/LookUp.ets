@@ -12,6 +12,7 @@ import { Album } from '../type/Album'
 import { LengthMetrics, promptAction, router } from '@kit.ArkUI'
 import { PlaybackControlBar } from '../component/PlaybackControlBar'
 import { BreakPointType } from '../common/BreakpointSystem'
+import { globalPlaylist } from '../common/GlobalPlayListManager'
 
 @Component
 export struct LookUp {
@@ -138,7 +139,7 @@ export struct LookUp {
       .margin({ bottom: 16 })
 
       // 每日推荐和私人FM骨架
-      Flex({ justifyContent: FlexAlign.Start }) {
+      Flex({ justifyContent: FlexAlign.Start, space: { main: LengthMetrics.px(16) } }) {
         Row()
           .width(this.cardWidth.getValue(this.currentBreakpoint))
           .height(100)
@@ -258,11 +259,6 @@ export struct LookUp {
           PersonalFMCard()
         }
         .width(this.cardWidth.getValue(this.currentBreakpoint))
-        .onClick(() => {
-          router.pushUrl({
-            url: "pages/PersonalFm",
-          })
-        })
       }
       .padding(this.contentPadding.getValue(this.currentBreakpoint))
       .width('100%')

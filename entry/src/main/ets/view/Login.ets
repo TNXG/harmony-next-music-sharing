@@ -142,8 +142,6 @@ export struct Login {
     try {
       let cookie = webview.WebCookieManager.fetchCookieSync('https://music.163.com')
       if (cookie) {
-        // 给网页版加上OS=PC标识
-        cookie = cookie + '; OS=pc'
         this.getLoginStatus(cookie)
         this.showWebLogin = false
       } else {

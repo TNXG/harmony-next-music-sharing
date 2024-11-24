@@ -5,7 +5,7 @@ import { SongListCard } from '../component/SongListCard'
 import { getPlayListDetail, getPlayListDetailDynamic } from '../api/Playlist'
 import { AccountProfile } from '../type/Account'
 import Logger from '../common/Logger'
-import { collectSong, getSongDetail, playlistSubscribe } from '../api/Song'
+import { collectSong, detailSource, getSongDetail, playlistSubscribe } from '../api/Song'
 import { promptAction, router } from '@kit.ArkUI'
 import { globalPlaylist } from '../common/GlobalPlayListManager'
 import { LazyData } from '@pie/lazy-data'
@@ -42,6 +42,12 @@ struct Collection {
   private offsetValue = 0
   private finished = false
   private isCreator = false
+  private isQuit = false
+
+  aboutToDisappear() {
+    this.isQuit = true
+    detailSource.cancel()
+  }
 
   @Builder
   SkeletonLoading() {
@@ -282,7 +288,9 @@ struct Collection {
       // Process tracks in batches
       for (let i = 0; i < remainingIds.length; i += FETCH_BATCH_SIZE) {
         const batchIds = remainingIds.slice(i, i + FETCH_BATCH_SIZE)
-        if (batchIds.length === 0) break
+        if (batchIds.length === 0 || this.isQuit) {
+          break
+        }
 
         const songDetail = await getSongDetail(batchIds)
         const songs = songDetail.songs as ESObject as Track[]
@@ -387,6 +395,10 @@ struct Collection {
         await this.loadAllTracks()
       }
 
+      if (this.isQuit) {
+        return
+      }
+
       const info = new TrackAndPrivilege()
       info.track = track
       info.privilege = privilege
@@ -399,8 +411,7 @@ struct Collection {
           return song
         })
 
-        globalPlaylist.overwrite(tempSongs)
-        globalPlaylist.setCurrentIndex(index)
+        globalPlaylist.overwrite(tempSongs, index)
         AppStorage.setOrCreate("Track", info)
       })
 
@@ -506,6 +517,10 @@ struct Collection {
           try {
             if (!this.finished) {
               await this.loadAllTracks()
+            }
+
+            if (this.isQuit) {
+              return
             }
 
             animateTo({ duration: 0 }, () => {

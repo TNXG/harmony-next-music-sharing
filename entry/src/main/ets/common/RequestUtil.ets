@@ -2,8 +2,12 @@ import axios, { AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosInst
 import Logger from './Logger';
 import Constant from './Constant';
 import { PreferencesUtil } from './PreferenceUtil';
+import { LoginStatusResponse, RefreshForm } from "../type/Account";
 
 const TAG = "RequestUtil";
+
+
+let isRefreshing = false
 
 // 类型定义
 type RequestInterceptorFn = (config: InternalAxiosRequestConfig) => Promise<InternalAxiosRequestConfig> | InternalAxiosRequestConfig;
@@ -16,6 +20,7 @@ interface RequestInterceptors {
   handleAuth: RequestInterceptorFn;
   handleError: ErrorHandlerFn;
   addCrypto: RequestInterceptorFn;
+  refreshLogin: RequestInterceptorFn;
 }
 
 interface ResponseInterceptors {
@@ -46,6 +51,56 @@ const getRandomChinaIPv4 = (): string => {
 
   return octets.join('.');
 };
+
+const shouldRefreshLogin = (): boolean => {
+  const lastRefreshTime = PreferencesUtil.get<number>('signAt');
+  if (!lastRefreshTime) {
+    return true;
+  }
+
+  const now = new Date();
+  const last = new Date(lastRefreshTime);
+
+  return now.getDate() !== last.getDate() ||
+    now.getMonth() !== last.getMonth() ||
+    now.getFullYear() !== last.getFullYear();
+};
+
+const mergeCookies = (webCookie: string, refreshedCookie: string): string => {
+  // 从原始cookie提取核心认证信息
+  const getMusicU = (cookie: string) => {
+    const match = cookie.match(/MUSIC_U=([^;]+)/);
+    return match ? match[1] : '';
+  };
+
+  const getCsrf = (cookie: string) => {
+    const match = cookie.match(/__csrf=([^;]+)/);
+    return match ? match[1] : '';
+  };
+
+  // 提取核心信息
+  const musicU = getMusicU(webCookie);
+  const csrf = getCsrf(webCookie);
+
+  // 从刷新的cookie提取新token
+  const getToken = (cookie: string, type: string) => {
+    const match = cookie.match(new RegExp(`${type}=(\\d+)`));
+    return match ? match[1] : '';
+  };
+
+  const musicAt = getToken(refreshedCookie, 'MUSIC_A_T');
+  const musicRt = getToken(refreshedCookie, 'MUSIC_R_T');
+
+  // 组合新的cookie
+  return [
+    `MUSIC_U=${musicU}`,
+    `__csrf=${csrf}`,
+    `MUSIC_A_T=${musicAt}`,
+    `MUSIC_R_T=${musicRt}`,
+    'MUSIC_SNS='
+  ].join('; ');
+};
+
 
 // 拦截器工具函数
 const addUrlParameter =
@@ -83,7 +138,8 @@ const requestInterceptors: RequestInterceptors = {
       if (!config.data) {
         config.data = {};
       }
-      if ((config.url && weapiUrls.some((url) => config.url?.includes(url))) || PreferencesUtil.get<boolean>("forceWebApi")) {
+      if ((config.url && weapiUrls.some((url) => config.url?.includes(url))) ||
+      PreferencesUtil.get<boolean>("forceWebApi")) {
         Logger.info('RequestUtil', `Crypto Using weapi`);
         config.data.crypto = "weapi"
       } else if (typeof config.data === 'object') {
@@ -117,6 +173,50 @@ const requestInterceptors: RequestInterceptors = {
     Logger.error(TAG, error.message);
     return Promise.reject(error);
   },
+
+  refreshLogin: async (config: InternalAxiosRequestConfig): Promise<InternalAxiosRequestConfig> => {
+    // 跳过登录刷新接口本身，避免循环调用
+    if (config.url?.includes('/login/refresh')) {
+      return config;
+    }
+
+    // 检查是否需要刷新登录
+    if (shouldRefreshLogin() && PreferencesUtil.isInitialized() && !isRefreshing){
+      isRefreshing = true
+      const cookie = PreferencesUtil.get<string>('cookie');
+      if (cookie) {
+        try {
+          Logger.info(TAG, 'Refreshing login status...');
+          const baseUrl = PreferencesUtil.get<string>('customURL') || Constant.BASE_URL
+          const refreshInstance = axios.create({
+            baseURL: baseUrl,
+            timeout: Constant.DEFAULT_TIMEOUT
+          });
+
+          const response = await refreshInstance.post('/login/refresh', {
+            cookie: cookie,
+            crypto: "weapi"
+          } as RefreshForm) as LoginStatusResponse
+
+          if (response.data?.code === 200) {
+            // 更新刷新时间
+            PreferencesUtil.put('signAt', Date.now());
+
+            // 如果返回了新的 cookie，更新存储
+            if (response.data.cookie) {
+              PreferencesUtil.put('cookie', mergeCookies(cookie, response.data.cookie));
+            }
+
+            Logger.info(TAG, 'Login refreshed successfully');
+            isRefreshing = false
+          }
+        } catch (error) {
+          Logger.error(TAG, 'Failed to refresh login: ' + error);
+        }
+      }
+    }
+    return config;
+  },
 };
 
 // 响应拦截器
@@ -135,7 +235,7 @@ const responseInterceptors: ResponseInterceptors = {
 // 创建请求实例的函数
 const createAxiosInstance = (isAnonymous = false): AxiosInstance => {
   Logger.info('RequestUtil', `CustomURL Using ${PreferencesUtil.get<string>('customURL')}`);
-  const baseUrl =  PreferencesUtil.get<string>('customURL') || Constant.BASE_URL
+  const baseUrl = PreferencesUtil.get<string>('customURL') || Constant.BASE_URL
   const instance = axios.create({
     baseURL: baseUrl,
     timeout: Constant.DEFAULT_TIMEOUT,
@@ -152,6 +252,7 @@ const createAxiosInstance = (isAnonymous = false): AxiosInstance => {
 
   // 为非匿名实例添加认证拦截器
   if (!isAnonymous) {
+    instance.interceptors.request.use(requestInterceptors.refreshLogin);
     instance.interceptors.request.use(
       requestInterceptors.handleAuth,
       requestInterceptors.handleError
@@ -168,7 +269,8 @@ export class RequestUtil {
   private _request?: AxiosInstance;
   private _anonymous?: AxiosInstance;
 
-  private constructor() {}
+  private constructor() {
+  }
 
   static getInstance(): RequestUtil {
     if (!RequestUtil.instance) {
@@ -205,7 +307,9 @@ export class RequestUtil {
 
 // 导出获取实例的方法而不是实例本身
 export const getRequest = (): AxiosInstance => RequestUtil.getInstance().getRequest();
+
 export const getAnonymous = (): AxiosInstance => RequestUtil.getInstance().getAnonymous();
+
 export const updateBaseURL = (url?: string): void => RequestUtil.getInstance().updateBaseURL(url);
 
 // 默认导出 getter 函数

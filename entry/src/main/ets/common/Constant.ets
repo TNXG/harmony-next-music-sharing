@@ -4,7 +4,7 @@ export default class Constant {
   static readonly ENCRYPT: boolean = true;
   static readonly ENCRYPT_RESPONSE: boolean = false;
   static readonly ANIMATION_DURATION: number = 300;
-  static readonly COOKIE_EXPIRY_DAYS = 7;
+  static readonly COOKIE_EXPIRY_DAYS = 180;
   static readonly DEFAULT_TIMEOUT = 60000;
   static readonly BASE_URL: string = "https://music-proxy.coolers.fun/"
   static readonly DEFAULT_COVER: Resource[] = [
