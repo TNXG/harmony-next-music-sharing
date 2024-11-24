@@ -1,9 +1,9 @@
 import { cover } from "../common/APIHelper"
 import { avPlayerManager } from "../common/AVPlayerManager"
-import { globalPlaylist } from "../common/GlobalPlayListManager"
+import { globalPlaylist, PlayType } from "../common/GlobalPlayListManager"
 import { TrackAndPrivilege } from "../type/Playlist"
 import { PlayList } from "./PlayList"
-import { router } from "@kit.ArkUI"
+import { promptAction, router } from "@kit.ArkUI"
 
 @Component
 export struct PlaybackControlBar {
@@ -206,6 +206,10 @@ export struct PlaybackControlBar {
             .margin({ left: 4 })
             .backgroundColor($r('app.color.control_button_bg'))
             .onClick(() => {
+              if (globalPlaylist.playType == PlayType.PERSONAL_FM) {
+                promptAction.showToast({ message: "当前模式下需要保留一点神秘感哦！" })
+                return
+              }
               this.showPlaylist = true
             })
           }
@@ -226,7 +230,7 @@ export struct PlaybackControlBar {
     .width('100%')
     .height(84)
     .zIndex(999)
-    .onClick(()=>{
+    .onClick(() => {
       router.pushUrl({
         url: "pages/Playing",
       })
@@ -237,7 +241,7 @@ export struct PlaybackControlBar {
       dragBar: false,
       scrollSizeMode: ScrollSizeMode.CONTINUOUS,
       backgroundColor: $r('app.color.playlist_bg'),
-      preferType : SheetType.BOTTOM,
+      preferType: SheetType.BOTTOM,
     })
   }
 }

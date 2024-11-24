@@ -403,8 +403,7 @@ struct Daily {
                 info.privilege = song.privilege as ESObject as Privilege
                 tempSongs.push(info)
               })
-              globalPlaylist.overwrite(tempSongs)
-              globalPlaylist.setCurrentIndex(index)
+              globalPlaylist.overwrite(tempSongs, index)
               AppStorage.setOrCreate("Track", info)
               router.pushUrl({
                 url: "pages/Playing",

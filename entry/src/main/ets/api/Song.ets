@@ -1,12 +1,19 @@
-import { AxiosResponse } from "@ohos/axios";
+import axios, { AxiosResponse, CancelTokenSource } from "@ohos/axios";
 import { PreferencesUtil } from "../common/PreferenceUtil";
-import {getRequest} from "../common/RequestUtil";
-import { DailySong, LyricResponse, SongDetailResponse, SongUrlResponse } from "../type/Song";
+import { getRequest } from "../common/RequestUtil";
+import { DailySong, IntelligenceResponse, LyricResponse, SongDetailResponse, SongUrlResponse } from "../type/Song";
+
+export const detailSource = axios.CancelToken.source();
+
+export interface AbortSource {
+  cancelToken: CancelTokenSource
+}
 
 // 获取歌曲详情 API
 export async function getSongDetail(ids: Array<number | string>): Promise<SongDetailResponse> {
   const request = getRequest()
-  const response: AxiosResponse = await request.post(`/song/detail?ids=${ids.join(",")}`);
+  const response: AxiosResponse =
+    await request.post(`/song/detail?ids=${ids.join(",")}`, { cancelToken: detailSource } as AbortSource);
   return response.data as SongDetailResponse;
 }
 
@@ -71,4 +78,11 @@ export async function getSongLyric(id: string | number): Promise<LyricResponse> 
 export async function collectSong(pid: number | string, ids: Array<number | string>, op: "add" | "del" = "add") {
   const request = getRequest()
   await request.post(`/playlist/tracks?op=${op}&pid=${pid}&tracks=${ids.join(",")}`);
+}
+
+// 开启心动模式
+export async function intelligence(pid: number | string, id: number | string) {
+  const request = getRequest()
+  const response: AxiosResponse = await request.post(`/playmode/intelligence/list?id=${id}&pid=${pid}`);
+  return response.data as IntelligenceResponse
 }

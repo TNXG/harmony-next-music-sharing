@@ -1,3 +1,5 @@
+import { Track } from "./Playlist";
+
 @Observed
 export class Artist {
   id: number = 0;
@@ -160,6 +162,7 @@ export class Privilege {
   // downloadMaxBrLevel: string = '';
   // plLevel: string = '';
   dlLevel: string = '';
+
   // flLevel: string = '';
   // freeTrialPrivilege: FreeTrialPrivilege = new FreeTrialPrivilege();
   // chargeInfoList: ChargeInfo[] = [];
@@ -356,6 +359,7 @@ export class SongUrl {
   // canExtend: boolean = false;
   // freeTrialInfo: FreeTrialInfoData | null = null;
   level: string = '';
+
   // encodeType: string = '';
   // freeTimeTrialPrivilege: FreeTrialPrivilege = new FreeTrialPrivilege();
   // urlSource: number = 0;
@@ -481,6 +485,33 @@ export class LyricLine {
     if (line !== undefined) {
       this.time = line.time;
       this.text = line.text;
+    }
+  }
+}
+
+@Observed
+export class IntelligenceSongInfo {
+  songInfo: SongDetail = new SongDetail()
+
+  constructor(response?: IntelligenceSongInfo) {
+    if (response !== undefined) {
+      this.songInfo = response.songInfo
+    }
+  }
+}
+
+
+@Observed
+export class IntelligenceResponse {
+  data: IntelligenceSongInfo[] = []
+  code: number = 0;
+  message: string = ''
+
+  constructor(response?: IntelligenceResponse) {
+    if (response !== undefined) {
+      this.data = response.data.map(song => new IntelligenceSongInfo(song));
+      this.code = response.code;
+      this.message = response.message
     }
   }
 }
