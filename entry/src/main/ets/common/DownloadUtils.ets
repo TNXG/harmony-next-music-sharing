@@ -55,6 +55,11 @@ export class DownloadUtils {
       try {
         const filePath = `${this.context!.filesDir}/${config.fileName}`;
 
+        // 首先检查文件是否存在，如果存在则直接返回
+        if (await fs.access(filePath)) {
+          return filePath;
+        }
+
         const downloadTask = await request.downloadFile(this.context!, {
           url: config.url,
           filePath: filePath

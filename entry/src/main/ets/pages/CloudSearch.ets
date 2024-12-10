@@ -1,19 +1,18 @@
 import { promptAction, router } from '@kit.ArkUI'
 import { SongListCard } from '../component/SongListCard'
 import { SongDetail } from '../type/Song'
-import { cloudSearch as search } from "../api/Search"
+import { cloudSearch as search, suggest } from "../api/Search"
 import { globalPlaylist } from '../common/GlobalPlayListManager'
 import { TrackAndPrivilege, Track, Privilege, Playlist } from '../type/Playlist'
 import { Artist } from '../type/Toplist'
-import { cover } from '../common/APIHelper'
+import { cover, isTrackPlayableWithParams } from '../common/APIHelper'
 import { PlaylistSelector } from '../component/PlaylistSelector'
 import { collectSong } from '../api/Song'
 import { PlaylistCard } from '../component/PlayListCard'
+import { SearchSuggest, SearchSuggestResponse } from '../type/Search'
 
 enum SearchType {
   SINGLE = 1,
-  ALBUM = 10,
-  ARTIST = 100,
   PLAYLIST = 1000
 }
 
@@ -34,17 +33,66 @@ struct CloudSearch {
   @State currentTab: number = 0
   @State offsetValue: number = 0
   @State hasMore: boolean = true
+  @State suggestions: SearchSuggest[] = []
+  @State animationState: number = 0
   private readonly pageSize: number = 20
   private searchController: SearchController = new SearchController()
   @StorageLink("Track") track: TrackAndPrivilege | null = null
+  @State showPlayListSelector: boolean = false
+  private nowSelected: number | string = 0
+  private debounceTimer: number | null = null
   private tabs: TabItem[] = [
     { name: '单曲', type: SearchType.SINGLE },
-  // { name: '专辑', type: SearchType.ALBUM },
-  // { name: '歌手', type: SearchType.ARTIST },
     { name: '歌单', type: SearchType.PLAYLIST }
   ]
-  @State showPlayListSelector: boolean = false
-  private nowSelected: number | string = 0;
+
+  private ignoreNextSuggestions: boolean = false
+
+  // 防抖函数实现
+  private debounce(fn: Function, delay: number = 300) {
+    if (this.debounceTimer !== null) {
+      clearTimeout(this.debounceTimer)
+    }
+    this.debounceTimer = setTimeout(() => {
+      fn()
+      this.debounceTimer = null
+    }, delay)
+  }
+
+  // 获取搜索建议
+  private async fetchSuggestions(keywords: string) {
+
+    if (this.ignoreNextSuggestions) {
+      this.ignoreNextSuggestions = false
+      return
+    }
+
+    if (!keywords.trim()) {
+      animateTo({ duration: 200 }, () => {
+        this.suggestions = []
+        this.animationState = 0
+      })
+      return
+    }
+
+    try {
+      const result = await suggest(keywords)
+      if (result?.result?.allMatch) {
+        animateTo({ duration: 200 }, () => {
+          this.suggestions = result.result.allMatch.slice(0, 5)
+          this.animationState = 1
+        })
+      } else {
+        animateTo({ duration: 200 }, () => {
+          this.suggestions = []
+          this.animationState = 0
+        })
+      }
+    } catch (error) {
+      console.error('Failed to fetch suggestions:', error)
+      this.suggestions = []
+    }
+  }
 
   @Builder
   PlayList() {
@@ -99,6 +147,14 @@ struct CloudSearch {
     this.showResults = false
     this.offsetValue = 0
     this.hasMore = true
+
+    const params = router.getParams()
+    if (params) {
+      const keyword = Object(params).keywords as string
+      this.ignoreNextSuggestions = true
+      this.searchText = keyword
+      this.handleSearch()
+    }
   }
 
   async handleSearch(loadMore: boolean = false) {
@@ -125,7 +181,7 @@ struct CloudSearch {
       const result = await search({
         keywords: this.searchText,
         limit: this.pageSize,
-        offset: this.offsetValue,
+        offset: this.offsetValue * this.pageSize,
         type: this.tabs[this.currentTab].type
       })
 
@@ -180,10 +236,10 @@ struct CloudSearch {
     }
   }
 
-
   @Builder
   SearchHeader() {
     Column() {
+      // 搜索框
       Row() {
         Search({
           value: this.searchText,
@@ -193,6 +249,7 @@ struct CloudSearch {
           .width('100%')
           .height(40)
           .backgroundColor($r('app.color.search_background'))
+          .expandSafeArea()
           .placeholderColor($r('app.color.search_placeholder'))
           .fontColor($r('app.color.search_text'))
           .placeholderFont({ size: 16 })
@@ -200,8 +257,12 @@ struct CloudSearch {
           .borderRadius(20)
           .onChange((value: string) => {
             this.searchText = value
+            this.debounce(() => {
+              this.fetchSuggestions(value)
+            })
           })
           .onSubmit(() => {
+            this.suggestions = []
             this.handleSearch()
           })
       }
@@ -213,7 +274,48 @@ struct CloudSearch {
         bottom: 8
       })
 
-      // Button-style Tabs
+      // 搜索建议标签
+      if (this.suggestions.length > 0) {
+        Flex({
+          direction: FlexDirection.Row,
+          wrap: FlexWrap.Wrap
+        }) {
+          ForEach(this.suggestions, (item: SearchSuggest) => {
+            Text(item.keyword)
+              .fontSize(14)
+              .fontColor($r('app.color.text_secondary'))
+              .backgroundColor($r('app.color.search_background'))
+              .padding({
+                left: 12,
+                right: 12,
+                top: 6,
+                bottom: 6
+              })
+              .borderRadius(16)
+              .margin({ right: 8, bottom: 8 })
+              .opacity(this.animationState)
+              .animation({
+                duration: 200,
+                curve: Curve.EaseOut
+              })
+              .onClick(() => {
+                this.ignoreNextSuggestions = true
+                this.searchText = item.keyword
+                this.suggestions = []
+                this.handleSearch()
+              })
+          })
+        }
+        .width('100%')
+        .padding({ left: 16, right: 16, bottom: 8 })
+        .opacity(this.animationState)
+        .animation({
+          duration: 200,
+          curve: Curve.EaseOut
+        })
+      }
+
+      // 分类标签
       Row() {
         Row() {
           ForEach(this.tabs, (tab: TabItem, index: number) => {
@@ -242,21 +344,13 @@ struct CloudSearch {
         .backgroundColor($r('app.color.button_ghost_background'))
       }
       .width('100%')
-      .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+      .padding({ left: 16, right: 16, bottom: 8 })
       .justifyContent(FlexAlign.Start)
-
-      // Tab Content
-      if (this.currentTab === 0) {
-        this.SearchResults()
-      } else {
-        this.PlaylistResults()
-      }
     }
     .width('100%')
     .backgroundColor($r('app.color.card_background'))
     .expandSafeArea()
   }
-
 
   @Builder
   PlaylistResults() {
@@ -338,7 +432,7 @@ struct CloudSearch {
       .width('100%')
       .height(48)
       .justifyContent(FlexAlign.Center)
-    } else if (!this.hasMore && this.searchResults.length > 0) {
+    } else if (!this.hasMore && (this.searchResults.length > 0 || this.playlistResults.length > 0)) {
       Row() {
         Text('没有更多了')
           .fontSize(14)
@@ -362,7 +456,8 @@ struct CloudSearch {
       .width('100%')
       .height('100%')
       .justifyContent(FlexAlign.Center)
-    } else if (this.showResults && (!this.searchResults || this.searchResults.length === 0)) {
+    } else if (this.showResults && (!this.searchResults || this.searchResults.length === 0) &&
+      (!this.playlistResults || this.playlistResults.length === 0)) {
       Column() {
         Image($r('app.media.ic_brush'))
           .width(120)
@@ -400,7 +495,8 @@ struct CloudSearch {
               index,
               coverSize: 56,
               tns: song.tns,
-              disabled: song.privilege ? song.privilege.st < 0 : false,
+              disabled: !isTrackPlayableWithParams(song as ESObject as Track, song.privilege as ESObject as Privilege)
+                .isPlayable,
               active: (!!this.track && this.track.track.id == song.id) ?? false,
               rightSlot: () => {
                 this.MoreActions(song)
@@ -411,6 +507,11 @@ struct CloudSearch {
                   const info = new TrackAndPrivilege()
                   info.track = song as ESObject as Track
                   info.privilege = song.privilege as ESObject as Privilege
+                  const playableResult = isTrackPlayableWithParams(info.track, info.privilege)
+                  if (!playableResult.isPlayable) {
+                    promptAction.showToast({ message: playableResult.reason })
+                    return
+                  }
                   globalPlaylist.insertTop(info)
                   AppStorage.setOrCreate("Track", info);
                   router.pushUrl({
@@ -445,6 +546,11 @@ struct CloudSearch {
         Stack() {
           this.EmptyState()
           this.LoadingState()
+          if (this.currentTab === 0) {
+            this.SearchResults()
+          } else {
+            this.PlaylistResults()
+          }
         }
         .layoutWeight(1)
       }

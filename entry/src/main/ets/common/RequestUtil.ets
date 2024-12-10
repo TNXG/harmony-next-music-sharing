@@ -1,13 +1,9 @@
-import axios, { AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosInstance, AxiosHeaders } from "@ohos/axios";
+import axios, { AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosInstance } from "@ohos/axios";
 import Logger from './Logger';
 import Constant from './Constant';
 import { PreferencesUtil } from './PreferenceUtil';
-import { LoginStatusResponse, RefreshForm } from "../type/Account";
 
 const TAG = "RequestUtil";
-
-
-let isRefreshing = false
 
 // 类型定义
 type RequestInterceptorFn = (config: InternalAxiosRequestConfig) => Promise<InternalAxiosRequestConfig> | InternalAxiosRequestConfig;
@@ -20,7 +16,6 @@ interface RequestInterceptors {
   handleAuth: RequestInterceptorFn;
   handleError: ErrorHandlerFn;
   addCrypto: RequestInterceptorFn;
-  refreshLogin: RequestInterceptorFn;
 }
 
 interface ResponseInterceptors {
@@ -30,75 +25,15 @@ interface ResponseInterceptors {
 
 // IP地址生成工具
 const getRandomChinaIPv4 = (): string => {
-  const CHINA_IP_RANGES = [
-    [1, 8],
-    [36, 63],
-    [101, 127],
-    [144, 159],
-    [182, 223],
-  ];
+  const chinaIPPrefixes = ['116.25', '116.76', '116.77', '116.78', '114.233', '211.161']
 
-  const getRandomNumber = (min: number, max: number): number =>
-  Math.floor(Math.random() * (max - min + 1)) + min;
-
-  const range = CHINA_IP_RANGES[Math.floor(Math.random() * CHINA_IP_RANGES.length)];
-  const octets = [
-    getRandomNumber(range[0], range[1]),
-    getRandomNumber(0, 255),
-    getRandomNumber(0, 255),
-    getRandomNumber(0, 255)
-  ];
-
-  return octets.join('.');
-};
-
-const shouldRefreshLogin = (): boolean => {
-  const lastRefreshTime = PreferencesUtil.get<number>('signAt');
-  if (!lastRefreshTime) {
-    return true;
+  const randomPrefix =
+    chinaIPPrefixes[Math.floor(Math.random() * chinaIPPrefixes.length)]
+  const randomSuffix = () => {
+    return Math.floor(Math.random() * 255)
   }
 
-  const now = new Date();
-  const last = new Date(lastRefreshTime);
-
-  return now.getDate() !== last.getDate() ||
-    now.getMonth() !== last.getMonth() ||
-    now.getFullYear() !== last.getFullYear();
-};
-
-const mergeCookies = (webCookie: string, refreshedCookie: string): string => {
-  // 从原始cookie提取核心认证信息
-  const getMusicU = (cookie: string) => {
-    const match = cookie.match(/MUSIC_U=([^;]+)/);
-    return match ? match[1] : '';
-  };
-
-  const getCsrf = (cookie: string) => {
-    const match = cookie.match(/__csrf=([^;]+)/);
-    return match ? match[1] : '';
-  };
-
-  // 提取核心信息
-  const musicU = getMusicU(webCookie);
-  const csrf = getCsrf(webCookie);
-
-  // 从刷新的cookie提取新token
-  const getToken = (cookie: string, type: string) => {
-    const match = cookie.match(new RegExp(`${type}=(\\d+)`));
-    return match ? match[1] : '';
-  };
-
-  const musicAt = getToken(refreshedCookie, 'MUSIC_A_T');
-  const musicRt = getToken(refreshedCookie, 'MUSIC_R_T');
-
-  // 组合新的cookie
-  return [
-    `MUSIC_U=${musicU}`,
-    `__csrf=${csrf}`,
-    `MUSIC_A_T=${musicAt}`,
-    `MUSIC_R_T=${musicRt}`,
-    'MUSIC_SNS='
-  ].join('; ');
+  return `${randomPrefix}.${randomSuffix()}.${randomSuffix()}`
 };
 
 
@@ -119,10 +54,10 @@ const requestInterceptors: RequestInterceptors = {
   },
 
   addRealIp: (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
-    let realIp = PreferencesUtil.get<string>('realIp');
+    let realIp = PreferencesUtil.get<string>('fakeIp');
     if (!realIp) {
       realIp = getRandomChinaIPv4();
-      PreferencesUtil.put('realIp', realIp);
+      PreferencesUtil.put('fakeIp', realIp);
     }
     return addUrlParameter(config, 'realIp', realIp);
   },
@@ -173,50 +108,81 @@ const requestInterceptors: RequestInterceptors = {
     Logger.error(TAG, error.message);
     return Promise.reject(error);
   },
+};
 
-  refreshLogin: async (config: InternalAxiosRequestConfig): Promise<InternalAxiosRequestConfig> => {
-    // 跳过登录刷新接口本身，避免循环调用
-    if (config.url?.includes('/login/refresh')) {
-      return config;
+const rawAxios = axios.create({
+  timeout: Constant.DEFAULT_TIMEOUT
+});
+
+// 临时的强制刷新标志
+let forceRefresh = false;
+
+const createCacheAdapter = () => {
+  // 需要缓存的 URL 列表
+  const cacheUrls = [
+    '/lyric',
+    '/user/playlist',
+    '/playlist/detail',
+    '/personalized',
+    '/toplist/artist',
+    '/toplist',
+    '/album/new'
+  ];
+
+  const buildCacheKey = (url: string): string => {
+    // 移除 realIp 和时间戳参数
+    const key = url.replace(/[?&]realIp=[^&]*/, '')
+      .replace(/[?&]_t=\d+/, '')
+      .replace(/[?&]$/, ''); // 清理末尾可能剩余的 ? 或 &
+    return key;
+  };
+
+  return async (config: InternalAxiosRequestConfig): Promise<AxiosResponse> => {
+    // 删除适配器
+    config.adapter = undefined;
+
+    const baseUrl = config.url?.split('?')[0];
+    if (!baseUrl || !cacheUrls.some(url => baseUrl.includes(url))) {
+      return rawAxios(config);
     }
 
-    // 检查是否需要刷新登录
-    if (shouldRefreshLogin() && PreferencesUtil.isInitialized() && !isRefreshing){
-      isRefreshing = true
-      const cookie = PreferencesUtil.get<string>('cookie');
-      if (cookie) {
-        try {
-          Logger.info(TAG, 'Refreshing login status...');
-          const baseUrl = PreferencesUtil.get<string>('customURL') || Constant.BASE_URL
-          const refreshInstance = axios.create({
-            baseURL: baseUrl,
-            timeout: Constant.DEFAULT_TIMEOUT
-          });
+    const cacheKey = `url_${buildCacheKey(config.url || '')}`;
 
-          const response = await refreshInstance.post('/login/refresh', {
-            cookie: cookie,
-            crypto: "weapi"
-          } as RefreshForm) as LoginStatusResponse
-
-          if (response.data?.code === 200) {
-            // 更新刷新时间
-            PreferencesUtil.put('signAt', Date.now());
-
-            // 如果返回了新的 cookie，更新存储
-            if (response.data.cookie) {
-              PreferencesUtil.put('cookie', mergeCookies(cookie, response.data.cookie));
-            }
-
-            Logger.info(TAG, 'Login refreshed successfully');
-            isRefreshing = false
-          }
-        } catch (error) {
-          Logger.error(TAG, 'Failed to refresh login: ' + error);
+    // 如果不是强制刷新，尝试获取缓存
+    if (!forceRefresh) {
+      try {
+        const cachedData = PreferencesUtil.get<string>(cacheKey);
+        if (cachedData) {
+          Logger.info(TAG, `Cache hit for ${cacheKey}`);
+          return JSON.parse(cachedData);
         }
+      } catch (error) {
+        Logger.error(TAG, `Cache error for ${cacheKey}: ${error}`);
       }
     }
-    return config;
-  },
+
+    // 发送请求并更新缓存
+    Logger.info(TAG, forceRefresh ?
+      `Force refresh for ${cacheKey}` :
+      `Cache miss for ${cacheKey}`
+    );
+
+    rawAxios.defaults.adapter = undefined;
+    const response: AxiosResponse = await rawAxios(config);
+
+    try {
+      PreferencesUtil.put(cacheKey, JSON.stringify(response));
+    } catch (error) {
+      Logger.error(TAG, `Failed to cache response for ${cacheKey}: ${error}`);
+    }
+
+    // 重置强制刷新标志
+    setTimeout(() => {
+      forceRefresh = false;
+    }, 1000);
+
+    return response;
+  };
 };
 
 // 响应拦截器
@@ -239,6 +205,7 @@ const createAxiosInstance = (isAnonymous = false): AxiosInstance => {
   const instance = axios.create({
     baseURL: baseUrl,
     timeout: Constant.DEFAULT_TIMEOUT,
+    adapter: createCacheAdapter()
   });
 
   // 添加通用拦截器
@@ -252,7 +219,7 @@ const createAxiosInstance = (isAnonymous = false): AxiosInstance => {
 
   // 为非匿名实例添加认证拦截器
   if (!isAnonymous) {
-    instance.interceptors.request.use(requestInterceptors.refreshLogin);
+    // instance.interceptors.request.use(requestInterceptors.refreshLogin);
     instance.interceptors.request.use(
       requestInterceptors.handleAuth,
       requestInterceptors.handleError
@@ -262,7 +229,6 @@ const createAxiosInstance = (isAnonymous = false): AxiosInstance => {
   return instance;
 };
 
-// 请求工具类
 // 请求工具类
 export class RequestUtil {
   private static instance: RequestUtil;
@@ -311,6 +277,10 @@ export const getRequest = (): AxiosInstance => RequestUtil.getInstance().getRequ
 export const getAnonymous = (): AxiosInstance => RequestUtil.getInstance().getAnonymous();
 
 export const updateBaseURL = (url?: string): void => RequestUtil.getInstance().updateBaseURL(url);
+
+export const forceRefreshCache = (): void => {
+  forceRefresh = true;
+};
 
 // 默认导出 getter 函数
 export default getRequest;

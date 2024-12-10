@@ -18,7 +18,7 @@ import { downloadManager } from '../common/DownloadUtils';
 import { TrackAndPrivilege } from '../type/Playlist';
 import { ChangeSong, globalPlaylist, PlayAction, PlayMode } from '../common/GlobalPlayListManager';
 import { cacheManager } from '../common/CacheManager';
-import { cover, getSupportedQuality, QualityLevel } from '../common/APIHelper';
+import { cover, getSupportedQuality, isTrackPlayable, QualityLevel } from '../common/APIHelper';
 import { checkIfLoved, getRecommendSongs, getSongLyric, getSongUrl, likeSong } from '../api/Song';
 import { util } from '@kit.ArkTS';
 import { avSession } from '@kit.AVSessionKit';
@@ -69,7 +69,7 @@ async function library() {
   }
 }
 
-async function getLyric (id: number| string) {
+async function getLyric(id: number | string) {
   const res = await getSongLyric(id);
   AppStorage.setOrCreate("Lyrics", res)
   EventBus.send("LyricsUpdated")
@@ -79,7 +79,9 @@ async function getLyric (id: number| string) {
 let currentCachingId: string | number | null = null;
 
 async function checkCacheFileExists(cache: SongCache): Promise<boolean> {
-  if (!cache || !cache.path) return false;
+  if (!cache || !cache.path) {
+    return false;
+  }
   try {
     await fs.access(cache.path);
     return true;
@@ -91,9 +93,12 @@ async function checkCacheFileExists(cache: SongCache): Promise<boolean> {
 }
 
 async function cacheNextSong() {
+  const nextTrack = globalPlaylist.getNext()
+  if (!nextTrack) {
+    return
+  }
+  const playableResult = isTrackPlayable(nextTrack)
   try {
-    const nextTrack = globalPlaylist.getNext()
-    if (!nextTrack) return
 
     const level = PreferencesUtil.get<QualityLevel>("defaultLevel") ?? "standard"
     const confirmLevel = getSupportedQuality(nextTrack.privilege.dlLevel as QualityLevel, level)
@@ -102,18 +107,22 @@ async function cacheNextSong() {
     // 增加缓存文件存在性检查
     if (cache) {
       const exists = await checkCacheFileExists(cache);
-      if (exists) return;
+      if (exists) {
+        return;
+      }
       // 如果文件不存在，继续执行下载逻辑
     }
 
-    if (nextTrack.privilege.st < 0) {
+    if (!playableResult.isPlayable) {
       return
     }
 
     currentCachingId = nextTrack.track.id;
 
     const url = (await getSongUrl(nextTrack.track.id)).data[0].url
-    if (!url) return
+    if (!url) {
+      return
+    }
 
     let fileName = url.split("/").pop() ?? `${util.generateRandomUUID()}`
     const index = fileName.indexOf("?")
@@ -141,6 +150,11 @@ async function cacheNextSong() {
   } catch (e) {
     currentCachingId = null;
     hilog.error(0x0000, 'CacheNextSong', 'Failed to cache next song: %{public}s', JSON.stringify(e))
+    if (playableResult.ignoreGray) {
+      promptAction.showToast({
+        message: "音乐资源获取失败，可能是因为歌曲已下架!"
+      })
+    }
   }
 }
 
@@ -218,7 +232,8 @@ async function handleSongDownload(
   confirmLevel: QualityLevel,
   autoCache: boolean
 ) {
-  if (track.privilege.st < 0) {
+  const playableResult = isTrackPlayable(track)
+  if (!playableResult.isPlayable) {
     if (globalPlaylist.getLastAction() == PlayAction.NEXT) {
       globalPlaylist.playNext()
     } else {
@@ -293,6 +308,10 @@ function getAuth() {
 
   AppStorage.setOrCreate("ValidCookie", isValidCookie)
   AppStorage.setOrCreate('Profile', profile)
+
+  // 输出调试一下
+  hilog.info(0x0000, 'testTag', 'cookie: %{public}s, signAt: %{public}s, profile: %{public}s', cookie, signAt,
+    JSON.stringify(profile));
 }
 
 function cached() {
@@ -301,7 +320,6 @@ function cached() {
 }
 
 export default class EntryAbility extends UIAbility {
-
   private shutdownTimer: number | null = null;
   private shutdownTime: number | null = null;
 
@@ -313,11 +331,11 @@ export default class EntryAbility extends UIAbility {
     audioFileSaver.init(this.context)
     await avPlayerManager.init(this.context);
 
-    avPlayerManager.addListener("onPlay", async ()=>{
+    avPlayerManager.addListener("onPlay", async () => {
       await backgroundRunningManager.startBackgroundRunning();
     })
 
-    avPlayerManager.addListener("onPause", async ()=>{
+    avPlayerManager.addListener("onPause", async () => {
       await backgroundRunningManager.startBackgroundRunning();
     })
 

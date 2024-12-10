@@ -6,6 +6,11 @@ export class Artist {
   name: string = '';
   alias: string[] = [];
   tns: string[] = [];
+  briefDesc?: string = '';
+  picUrl?: string = '';
+  albumSize?: number = 0;
+  musicSize?: number = 0;
+  mvSize?: number = 0;
 
   constructor(artist?: Artist) {
     if (artist !== undefined) {
@@ -13,6 +18,11 @@ export class Artist {
       this.name = artist.name;
       this.alias = artist.alias;
       this.tns = artist.tns;
+      this.briefDesc = artist.briefDesc;
+      this.picUrl = artist.picUrl;
+      this.albumSize = artist.albumSize;
+      this.musicSize = artist.musicSize;
+      this.mvSize = artist.mvSize;
     }
   }
 }
@@ -406,12 +416,12 @@ export class SongDetailResponse {
 
 @Observed
 export class SongUrlResponse {
-  data: SongUrl[] = []
+  data: SongUrl[] = [];
   code: number = 0;
 
   constructor(response?: SongUrlResponse) {
     if (response !== undefined) {
-      this.data = response.data.map(song => new SongUrl(song));
+      this.data = response.data.map(songUrl => new SongUrl(songUrl));
       this.code = response.code;
     }
   }

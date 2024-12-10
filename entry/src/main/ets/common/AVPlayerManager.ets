@@ -377,8 +377,10 @@ class AVPlayerManager {
         switch (interruptEvent.hintType) {
           case audio.InterruptHint.INTERRUPT_HINT_PAUSE:
             // 系统强制暂停（临时失去焦点）
-            this.isPlayingBeforeInterrupt = player.state === 'playing';
+            const tempState = this.isPlayingBeforeInterrupt
             await this.pause();
+            this.isPlayingBeforeInterrupt = tempState;
+            Logger.info("audioInterrupt", JSON.stringify(this.isPlayingBeforeInterrupt))
             break;
 
           case audio.InterruptHint.INTERRUPT_HINT_RESUME:
@@ -407,6 +409,7 @@ class AVPlayerManager {
         }
       } else {
         // 非强制打断
+        Logger.info("audioInterrupt", JSON.stringify(this.isPlayingBeforeInterrupt))
         switch (interruptEvent.hintType) {
           case audio.InterruptHint.INTERRUPT_HINT_PAUSE:
             await this.pause();
@@ -468,7 +471,6 @@ class AVPlayerManager {
           if (await globalPlaylist.playNext()) {
             return;
           }
-          this.isPlayingBeforeInterrupt = false;
           this.currentPlaybackState = avSession.PlaybackState.PLAYBACK_STATE_PAUSE;
           this.updatePlaybackState(avSession.PlaybackState.PLAYBACK_STATE_PAUSE);
           this.triggerCompleted();

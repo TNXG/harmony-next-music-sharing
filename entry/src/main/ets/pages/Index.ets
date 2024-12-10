@@ -123,7 +123,9 @@ struct Index {
       .expandSafeArea()
       .onChange(async (index: number) => {
         this.currentPageIndex = index;
-        EventBus.send("ViewChange", index == 0 ? "lookup" : index == 1 ? "library" : "cached")
+        if (index !== 0) {
+          EventBus.send("ViewChange", index == 1 ? "library" : "cached")
+        }
       })
     }
     .width('100%')

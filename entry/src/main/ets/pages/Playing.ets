@@ -9,7 +9,7 @@ import { PlayList } from '../component/PlayList'
 import { LyricView } from '../component/LyricDisplay'
 import { PlaylistSelector } from '../component/PlaylistSelector'
 import { collectSong, intelligence } from '../api/Song'
-import { promptAction } from '@kit.ArkUI'
+import { promptAction, router } from '@kit.ArkUI'
 import { TimerSelector } from '../component/TimerSelector'
 
 @Entry
@@ -204,13 +204,26 @@ struct Playing {
 
   private coverWidth = new BreakPointType({
     sm: '85%',
-    md: '75%',
+    md: '55%',
     lg: '30%'
   })
+
   private buttonSize = new BreakPointType({
     sm: 48,
     md: 56,
     lg: 56
+  })
+
+  private lyricView = new BreakPointType({
+    sm: "0", // 小屏幕是Tabs
+    md: "50%",
+    lg: "40%"
+  })
+
+  private playingView = new BreakPointType({
+    sm: "100%",
+    md: "50%",
+    lg: "60%"
   })
 
   @Builder
@@ -408,7 +421,7 @@ struct Playing {
       this.BlurBackground()
 
       Column() {
-        if (this.currentBreakpoint === BreakpointConstants.BREAKPOINT_LG) {
+        if (this.currentBreakpoint === BreakpointConstants.BREAKPOINT_LG || this.currentBreakpoint === BreakpointConstants.BREAKPOINT_MD) {
           Row() {
             Column() {
               Image(cover(this.track?.track.al.picUrl ?? "", 512))
@@ -439,7 +452,7 @@ struct Playing {
               .layoutWeight(1)
               .justifyContent(FlexAlign.End)
             }
-            .width('60%')
+            .width(this.playingView.getValue(this.currentBreakpoint))
             .height('100%')
             .alignItems(HorizontalAlign.Center)
             .padding({ bottom: 32 })
@@ -447,7 +460,7 @@ struct Playing {
             Column() {
               LyricView()
             }
-            .width('40%')
+            .width(this.lyricView.getValue(this.currentBreakpoint))
             .height('100%')
             .expandSafeArea()
             .padding(16)
@@ -509,6 +522,18 @@ struct Playing {
     .width('100%')
     .height('100%')
     .expandSafeArea()
+    .gesture(
+      SwipeGesture({
+        // 竖直方向滑动
+        direction: SwipeDirection.Vertical,
+      }).onAction((event) => {
+        if (event.angle < 0) {
+          this.showPlaylist = true;
+        } else {
+          router.back()
+        }
+      })
+    )
     .bindSheet($$this.showPlaylist, this.sheet , {
       showClose: false,
       height: this.selector == "timeSelector" ? SheetSize.FIT_CONTENT : SheetSize.MEDIUM,

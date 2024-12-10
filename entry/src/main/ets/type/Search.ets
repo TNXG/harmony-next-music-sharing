@@ -48,3 +48,20 @@ export interface  SearchParams {
   offset?: number;
   type?: SearchType;
 }
+
+export interface SearchSuggest {
+  keyword: string;
+  type: number;
+  alg: string;
+  lastKeyword: string;
+  feature: string;
+}
+
+export interface SearchSuggestResult {
+  allMatch: SearchSuggest[];
+}
+
+export interface SearchSuggestResponse {
+  result: SearchSuggestResult;
+  code: number;
+}

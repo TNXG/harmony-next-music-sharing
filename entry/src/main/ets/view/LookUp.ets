@@ -3,16 +3,15 @@ import { SearchBar } from '../component/SearchBar'
 import { StyleConstants } from '../common/Constant'
 import { PersonalizedPlaylist } from '../type/Personalized'
 import { cover, shuffle } from '../common/APIHelper'
-import { getPersonalizedCollection } from '../api/Personalized'
 import { DailyRecommendCard } from '../component/DailyRecommendCard'
 import { PersonalFMCard } from '../component/PersonalFMCard'
 import { Artist, Playlist } from '../type/Toplist'
 import { ArtistCircleCard } from '../component/ArtistCircleCard'
 import { Album } from '../type/Album'
 import { LengthMetrics, promptAction, router } from '@kit.ArkUI'
-import { PlaybackControlBar } from '../component/PlaybackControlBar'
 import { BreakPointType } from '../common/BreakpointSystem'
-import { globalPlaylist } from '../common/GlobalPlayListManager'
+import { EventBus } from '../common/EventBus'
+import { forceRefreshCache } from '../common/RequestUtil'
 
 @Component
 export struct LookUp {
@@ -24,6 +23,7 @@ export struct LookUp {
   @State isRefreshing: boolean = false
   @State loadingContent: boolean = true
   // 添加响应式断点配置
+
   private imageWidth = new BreakPointType({
     sm: '40%',
     md: '30%',
@@ -50,29 +50,24 @@ export struct LookUp {
     lg: '30%'
   })
 
-  aboutToAppear() {
-    this.initData()
+  async aboutToAppear() {
+    this.loadingContent = true
+    await new Promise<boolean>(resolve => {
+      const checkCache = setInterval(() => {
+        if (this.personalizedPlaylist && this.toplistArtistList && this.newAlbumList && this.topListAlbumList) {
+          // 等页面加载完毕后再显示内容
+          setTimeout(() => {
+            this.loadingContent = false
+            clearInterval(checkCache)
+            resolve(true)
+          }, 1666)
+        }
+      }, 100);
+    });
   }
 
   waiting() {
     promptAction.showToast({ message: "别催啦，在做啦~" })
-  }
-
-  async initData() {
-    this.loadingContent = true
-    try {
-      const result = await getPersonalizedCollection()
-      animateTo({
-        duration: 400,
-        curve: Curve.ExtremeDeceleration
-      }, () => {
-        this.loadingContent = false
-        AppStorage.setOrCreate('PersonalizedPlaylist', result.result)
-      })
-    } catch (error) {
-      console.error('Init data failed:', error)
-      this.loadingContent = false
-    }
   }
 
   @Builder
@@ -210,12 +205,12 @@ export struct LookUp {
             weight: StyleConstants.FONT_WEIGHT_SEVEN
           })
           .fontColor($r('app.color.title_text'))
-        Text("查看更多")
-          .font({ size: 14, weight: StyleConstants.FONT_WEIGHT_FOUR })
-          .fontColor($r('app.color.more_text'))
-          .onClick(() => {
-            this.waiting()
-          })
+        // Text("查看更多")
+        //   .font({ size: 14, weight: StyleConstants.FONT_WEIGHT_FOUR })
+        //   .fontColor($r('app.color.more_text'))
+        //   .onClick(() => {
+        //     this.waiting()
+        //   })
       }
       .padding({
         left: this.contentPadding.getValue(this.currentBreakpoint),
@@ -289,12 +284,12 @@ export struct LookUp {
             weight: StyleConstants.FONT_WEIGHT_SEVEN
           })
           .fontColor($r('app.color.title_text'))
-        Text("查看更多")
-          .font({ size: 14, weight: StyleConstants.FONT_WEIGHT_FOUR })
-          .fontColor($r('app.color.more_text'))
-          .onClick(() => {
-            this.waiting()
-          })
+        // Text("查看更多")
+        //   .font({ size: 14, weight: StyleConstants.FONT_WEIGHT_FOUR })
+        //   .fontColor($r('app.color.more_text'))
+        //   .onClick(() => {
+        //     this.waiting()
+        //   })
       }
       .padding({
         left: this.contentPadding.getValue(this.currentBreakpoint),
@@ -314,12 +309,12 @@ export struct LookUp {
             weight: StyleConstants.FONT_WEIGHT_SEVEN
           })
           .fontColor($r('app.color.title_text'))
-        Text("查看更多")
-          .font({ size: 14, weight: StyleConstants.FONT_WEIGHT_FOUR })
-          .fontColor($r('app.color.more_text'))
-          .onClick(() => {
-            this.waiting()
-          })
+        // Text("查看更多")
+        //   .font({ size: 14, weight: StyleConstants.FONT_WEIGHT_FOUR })
+        //   .fontColor($r('app.color.more_text'))
+        //   .onClick(() => {
+        //     this.waiting()
+        //   })
       }
       .padding({
         left: this.contentPadding.getValue(this.currentBreakpoint),
@@ -391,7 +386,12 @@ export struct LookUp {
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .maxLines(2)
         }.onClick(() => {
-          this.waiting()
+          router.pushUrl({
+            url: "pages/CloudSearch",
+            params: {
+              keywords: item.name
+            }
+          })
         })
       })
     }
@@ -410,7 +410,12 @@ export struct LookUp {
         }
         .margin(5)
         .onClick(() => {
-          this.waiting()
+          router.pushUrl({
+            url: "pages/CloudSearch",
+            params: {
+              keywords: item.name
+            }
+          })
         })
       })
     }
@@ -445,6 +450,7 @@ export struct LookUp {
             .maxLines(2)
         }
         .onClick(() => {
+          forceRefreshCache()
           AppStorage.setOrCreate("CollectionId", item.id)
           router.pushUrl({
             url: "pages/Collection",
@@ -458,19 +464,28 @@ export struct LookUp {
     Column() {
       SearchBar({})
 
-      List() {
-        ListItem() {
-          if (this.loadingContent) {
-            this.SkeletonLoading()
-          } else {
-            this.MainContent()
+      Refresh({ refreshing: $$this.isRefreshing, offset: 120, friction: 100 }) {
+        List() {
+          ListItem() {
+            if (this.loadingContent) {
+              this.SkeletonLoading()
+            } else {
+              this.MainContent()
+            }
           }
         }
+        .scrollBar(BarState.Off)
+        .width(StyleConstants.FULL_WIDTH)
+        .edgeEffect(EdgeEffect.Spring)
+        .layoutWeight(1)
       }
-      .scrollBar(BarState.Off)
-      .width(StyleConstants.FULL_WIDTH)
-      .edgeEffect(EdgeEffect.Spring)
-      .layoutWeight(1)
+      .onRefreshing(async () => {
+        this.isRefreshing = true
+        forceRefreshCache()
+        EventBus.send("ViewChange", "lookup")
+        this.isRefreshing = false
+      })
+      .margin({ bottom: 72 })
     }
     .width(StyleConstants.FULL_WIDTH)
     .height(StyleConstants.FULL_HEIGHT)

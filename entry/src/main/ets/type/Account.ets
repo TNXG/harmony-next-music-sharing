@@ -6,6 +6,7 @@ export interface AccountProfile {
   nickname: string
   avatarUrl: string
   backgroundUrl: string
+  vipType: number
 }
 
 export interface Account {

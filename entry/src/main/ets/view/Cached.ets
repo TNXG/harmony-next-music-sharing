@@ -1,11 +1,15 @@
 import { StyleConstants } from '../common/Constant'
 import { cacheManager, CacheStats } from '../common/CacheManager'
 import { SongCache } from '../type/Song'
-import { promptAction } from '@kit.ArkUI'
+import { promptAction, router } from '@kit.ArkUI'
 import Logger from '../common/Logger'
 import { cover, qualityDescriptions } from '../common/APIHelper'
 import { fileIo as fs } from '@kit.CoreFileKit'
 import { audioFileSaver } from '../common/AudioFileSaver'
+import { globalPlaylist } from '../common/GlobalPlayListManager'
+import { Privilege, TrackAndPrivilege, Track } from '../type/Playlist'
+import { Artist } from '../type/Toplist'
+import { Album } from '../type/Album'
 
 interface CacheValue {
   value: SongCache;
@@ -157,6 +161,44 @@ export struct Cached {
     }
   }
 
+  private handleTrackClick(item: CacheList, index: number) {
+    // 构建播放列表
+    const playList:TrackAndPrivilege[] = this.cacheList.map(cacheItem => {
+      const track = new Track()
+      track.id = Number(cacheItem.data.value.id)
+      track.name = cacheItem.data.value.name
+      track.ar = cacheItem.data.value.artist.map(artist => {
+        const ar = new Artist()
+        ar.id = 0
+        ar.name = artist
+        return ar
+      })
+      const al = new Album()
+      al.id = 0
+      al.picUrl = cacheItem.data.value.coverImgUrl
+      track.al = al
+
+      const privilege = new Privilege()
+      privilege.id = Number(cacheItem.data.value.id)
+      privilege.st = 0 // 表示可用状态
+
+      const trackAndPrivilege = new TrackAndPrivilege()
+      trackAndPrivilege.track = track
+      trackAndPrivilege.privilege = privilege
+
+      return trackAndPrivilege
+    })
+
+    // 更新全局播放列表并开始播放
+    animateTo({ duration: 0 }, () => {
+      globalPlaylist.overwrite(playList, index)
+      AppStorage.setOrCreate("Track", playList[index])
+    })
+
+    // 跳转到播放页面
+    router.pushUrl({ url: "pages/Playing" })
+  }
+
   @Builder
   CacheStats() {
     Row() {
@@ -221,7 +263,7 @@ export struct Cached {
   @Builder
   CacheList() {
     List({ space: 8 }) {
-      ForEach(this.cacheList, (item: CacheList) => {
+      ForEach(this.cacheList, (item: CacheList, index:number) => {
         ListItem() {
           Row() {
             Image(cover(item.data.value.coverImgUrl, 100))
@@ -257,6 +299,9 @@ export struct Cached {
           .backgroundColor(Color.Transparent)
           .borderRadius(12)
         }
+        .onClick(() => {
+          this.handleTrackClick(item, index)
+        })
         .swipeAction({ end: this.SwipeActions(item) })
         .animation({
           duration: 300,

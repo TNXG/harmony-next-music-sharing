@@ -1,5 +1,5 @@
 import { Creator, Privilege, Track, TrackAndPrivilege, TrackId, UserPlaylistResponse } from "../type/Playlist"
-import { cover } from "../common/APIHelper"
+import { cover, isTrackPlayable, isTrackPlayableWithParams } from "../common/APIHelper"
 import { StyleConstants } from '../common/Constant'
 import { SongListCard } from '../component/SongListCard'
 import { getPlayListDetail, getPlayListDetailDynamic } from '../api/Playlist'
@@ -29,12 +29,12 @@ struct Collection {
   @State trackIds: TrackId[] = []
   @State basePlayListInfo: BasePlayListInfo | null = null
   @State subscribed: boolean = false
-  @State dataSource: LazyData<Track> = new LazyData()
+  dataSource: LazyData<Track> = new LazyData()
   @State isSelectMode: boolean = false
   @State selectedTracks: Set<number> = new Set()
   @State showPlayList: boolean = false
   private readonly BATCH_SIZE = 50 // Size for each batch update to LazyData
-  private readonly FETCH_BATCH_SIZE = 500 // Size for network requests
+  private readonly FETCH_BATCH_SIZE = 333 // Size for network requests
   private readonly MAX_TRACKS = 10000
   private allTracks: Track[] = []
   private allPrivileges: Privilege[] = []
@@ -353,9 +353,9 @@ struct Collection {
       const initialTracks = playlistDetailRes.playlist.tracks ?? []
       this.allTracks = initialTracks
 
-      await this.batchAddInitialData(initialTracks)
+      await this.batchAddInitialData(initialTracks.slice(0, this.BATCH_SIZE))
 
-      this.offsetValue = initialTracks.length
+      this.offsetValue = Math.min(this.BATCH_SIZE, this.trackIds.length)
       this.finished = initialTracks.length === this.trackIds.length
       this.isCreator = playlistDetailRes.playlist.creator.userId === this.profile?.userId
 
@@ -383,9 +383,17 @@ struct Collection {
       return
     }
 
+    const defaultPrivilege = new Privilege()
+    defaultPrivilege.st = 0
+
+    // 使用新的权限检查函数
     const privilege = this.privilegeMap.get(track.id)
-    if (!privilege || privilege.st < 0) {
-      promptAction.showToast({ message: "灰标歌曲，无法播放" })
+    const trackWithPrivilege = new TrackAndPrivilege()
+    trackWithPrivilege.track = track
+    trackWithPrivilege.privilege = privilege ?? defaultPrivilege
+    const playableResult = isTrackPlayable(trackWithPrivilege)
+    if (!playableResult.isPlayable) {
+      promptAction.showToast({ message: playableResult.reason })
       return
     }
 
@@ -401,7 +409,7 @@ struct Collection {
 
       const info = new TrackAndPrivilege()
       info.track = track
-      info.privilege = privilege
+      info.privilege = this.privilegeMap.get(track.id) ?? defaultPrivilege
 
       animateTo({ duration: 0 }, () => {
         const tempSongs = this.allTracks.map(track => {
@@ -604,7 +612,7 @@ struct Collection {
         showIndex: !this.isSelectMode,
         index: this.isSelectMode ? -1 : index,
         tns: track.tns,
-        disabled: !this.privilegeMap.get(track.id) || this.privilegeMap.get(track.id)!.st < 0,
+        disabled: !isTrackPlayableWithParams(track, this.privilegeMap.get(track.id)).isPlayable,
         active: (!!this.track && this.track.track.id == track.id) ?? false,
         rightSlot: () => {
           if (!this.isSelectMode) {
@@ -711,7 +719,7 @@ struct Collection {
                       GridItem() {
                         this.TrackItem(item, index)
                       }.reuseId(`track-${item.id}`)
-                    }, (item: Track) => `track-${item.id}`)
+                    })
                   }
                   .width(StyleConstants.FULL_WIDTH)
                   .columnsTemplate('repeat(1, 1fr)')

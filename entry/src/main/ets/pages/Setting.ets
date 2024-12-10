@@ -1,7 +1,7 @@
 import { StyleConstants } from '../common/Constant'
 import { PreferencesUtil } from '../common/PreferenceUtil'
 import { promptAction } from '@kit.ArkUI'
-import { qualityDescriptions, LevelType } from '../common/APIHelper'
+import { qualityDescriptions, QualityLevel, qualityLevels, setIgnoreGray } from '../common/APIHelper'
 import { updateBaseURL } from '../common/RequestUtil'
 
 @CustomDialog
@@ -82,9 +82,10 @@ struct UrlInputDialog {
 @Component
 struct Settings {
   @State customApiUrl: string = ''
-  @State selectedQuality: keyof LevelType = PreferencesUtil.get<keyof LevelType>('defaultLevel') ?? "standard"
+  @State selectedQuality: QualityLevel = PreferencesUtil.get<QualityLevel>('defaultLevel') ?? "standard"
   @State autoCache: boolean = PreferencesUtil.get<boolean>("autoCache") ?? false
   @State forceWebApi: boolean = PreferencesUtil.get<boolean>("forceWebApi") ?? false
+  @State ignoreGray: boolean = PreferencesUtil.get<boolean>("ignoreGray") ?? false
 
   dialogController: CustomDialogController = new CustomDialogController({
     builder: UrlInputDialog({
@@ -128,6 +129,57 @@ struct Settings {
           .justifyContent(FlexAlign.SpaceBetween)
 
           Text('避免官方模式下混用API造成的灰标')
+            .fontSize(14)
+            .fontColor($r('app.color.text_secondary'))
+            .margin({ top: 4 })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+      }
+      .width('100%')
+      .padding(16)
+      .backgroundColor($r('app.color.card_background_two'))
+      .borderRadius(12)
+      .shadow({
+        radius: 12,
+        color: $r('app.color.card_shadow'),
+        offsetX: 0,
+        offsetY: 2
+      })
+    }
+  }
+
+  // 忽略灰标 设置
+  @Builder
+  IgnoreGraySetting() {
+    Column() {
+      Row() {
+        Column() {
+          Row() {
+            Text('忽略灰标')
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_primary'))
+
+            Toggle({ type: ToggleType.Switch, isOn: this.ignoreGray })
+              .onChange((isOn: boolean) => {
+                this.ignoreGray = isOn
+                PreferencesUtil.put('ignoreGray', isOn)
+                setIgnoreGray(isOn)
+                promptAction.showToast({
+                  message: isOn ? '已开启忽略灰标' : '已关闭忽略灰标'
+                })
+              })
+              .margin({ left: 8 })
+          }
+          .width('100%')
+          .justifyContent(FlexAlign.SpaceBetween)
+
+          Text('在列表内不展示灰标情况，但并不保证播放正常')
+            .fontSize(14)
+            .fontColor($r('app.color.text_secondary'))
+            .margin({ top: 4 })
+          Text('如果一首歌长时间没有加载，那么可能是真的没办法播放')
             .fontSize(14)
             .fontColor($r('app.color.text_secondary'))
             .margin({ top: 4 })
@@ -202,9 +254,14 @@ struct Settings {
     }
 
     // 读取保存的音质设置
-    const savedQuality = PreferencesUtil.get<string>('defaultLevel') ?? "standard"
+    const savedQuality = PreferencesUtil.get<QualityLevel>('defaultLevel') ?? "standard"
     if (savedQuality) {
-      this.selectedQuality = savedQuality as keyof LevelType
+      if (qualityLevels.includes(savedQuality)) {
+        this.selectedQuality = savedQuality
+      } else {
+        this.selectedQuality = "standard"
+        PreferencesUtil.put('defaultLevel', 'standard')
+      }
     }
   }
 
@@ -298,7 +355,7 @@ struct Settings {
                 .checked(this.selectedQuality === key)
                 .onChange((isChecked: boolean) => {
                   if (isChecked) {
-                    this.selectedQuality = key as keyof LevelType
+                    this.selectedQuality = key as QualityLevel
                     PreferencesUtil.put('defaultLevel', key)
                     promptAction.showToast({ message: '音质设置已更新' })
                   }
@@ -311,7 +368,7 @@ struct Settings {
             .width('100%')
             .height(48)
             .onClick(() => {
-              this.selectedQuality = key as keyof LevelType
+              this.selectedQuality = key as QualityLevel
               PreferencesUtil.put('defaultLevel', key)
               promptAction.showToast({ message: '音质设置已更新' })
             })
@@ -354,6 +411,7 @@ struct Settings {
           this.QualitySetting()
           this.AutoCacheSetting()
           this.ForceWebApiSetting()
+          this.IgnoreGraySetting()
         }
         .width('100%')
         .padding(16)

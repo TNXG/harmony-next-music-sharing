@@ -1,6 +1,6 @@
 import { AxiosResponse } from "@ohos/axios"
 import { PreferencesUtil } from "../common/PreferenceUtil";
-import { getRequest } from "../common/RequestUtil"
+import { forceRefreshCache, getRequest } from "../common/RequestUtil"
 import { AccountProfile } from "../type/Account"
 import { StatsResponse, PlaylistDetailResponse, UserPlaylistResponse } from "../type/Playlist"
 
@@ -38,6 +38,9 @@ export async function createPlayList(name: string) {
   const request = getRequest()
   name = encodeURIComponent(name)
   const res: AxiosResponse = await request.post(`/playlist/create?name=${name}`)
+  // 后台强制刷新用户歌单信息
+  forceRefreshCache()
+  getUserPlaylist()
   const data = res.data.id as number
   return data
 }

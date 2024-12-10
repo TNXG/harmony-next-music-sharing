@@ -170,6 +170,8 @@ export struct Login {
       EventBus.send("ViewChange", "library")
 
       if (PreferencesUtil.isInitialized()) {
+        // 给Cookie加OS=pc
+        cookie = cookie + '; os=pc'
         PreferencesUtil.put("account", account)
         PreferencesUtil.put("profile", profile)
         PreferencesUtil.put("cookie", cookie)

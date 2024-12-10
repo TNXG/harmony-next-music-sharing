@@ -267,6 +267,10 @@
     {
       "name": "image_info_background",
       "value": "#FFFFFF"
+    },
+    {
+      "name": "suggestion_tag_bg",
+      "value": "#F5F5F5"
     }
   ]
 }

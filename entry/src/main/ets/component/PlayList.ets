@@ -2,14 +2,14 @@ import { SongListCard } from './SongListCard';
 import { TrackAndPrivilege } from '../type/Playlist';
 import { globalPlaylist, PlaylistChangeType } from '../common/GlobalPlayListManager';
 import { EventBus } from '../common/EventBus';
-import { cover } from '../common/APIHelper';
+import { cover, isTrackPlayableWithParams } from '../common/APIHelper';
 import { promptAction } from '@kit.ArkUI';
 import { LazyData } from '@pie/lazy-data';
 
 @Component
 export struct PlayList {
   @Link showPlaylist: boolean;
-  @State dataSource: LazyData<TrackAndPrivilege> = new LazyData();
+  dataSource: LazyData<TrackAndPrivilege> = new LazyData();
   @StorageLink("Track") track: TrackAndPrivilege | null = null;
   @State isLoading: boolean = false;
   @State currentPage: number = 0;
@@ -188,18 +188,19 @@ export struct PlayList {
               index: globalPlaylist.getPlaylist().findIndex(item => item.track.id === track.track.id),
               coverUrl: cover(track.track.al?.picUrl ?? "", 64),
               active: this.track?.track.id === track.track.id,
-              disabled: track.privilege.st < 0,
+              disabled: !isTrackPlayableWithParams(track.track, track.privilege).isPlayable,
               showIndex: false,
             })
               .onClick(() => {
-                if (track.privilege.st >= 0) {
-                  const globalIndex = globalPlaylist.getPlaylist()
-                    .findIndex(item => item.track.id === track.track.id);
-                  if (globalIndex !== -1) {
-                    globalPlaylist.setCurrentSongIndex(globalIndex);
-                  }
-                } else {
-                  promptAction.showToast({ message: "官方音源下架，无法播放" })
+                const playableResult = isTrackPlayableWithParams(track.track, track.privilege);
+                if (!playableResult.isPlayable) {
+                  promptAction.showToast({ message: playableResult.reason })
+                  return
+                }
+                const globalIndex = globalPlaylist.getPlaylist()
+                  .findIndex(item => item.track.id === track.track.id);
+                if (globalIndex !== -1) {
+                  globalPlaylist.setCurrentSongIndex(globalIndex);
                 }
               })
           }

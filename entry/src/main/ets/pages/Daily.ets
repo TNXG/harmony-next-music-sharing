@@ -1,5 +1,5 @@
 import { Privilege, Track, TrackAndPrivilege } from "../type/Playlist"
-import { cover } from "../common/APIHelper"
+import { cover, isTrackPlayableWithParams } from "../common/APIHelper"
 import { StyleConstants } from '../common/Constant'
 import { SongListCard } from '../component/SongListCard'
 import { AccountProfile } from '../type/Account'
@@ -319,7 +319,7 @@ struct Daily {
           globalPlaylist.overwrite(tempSongs)
           // 加载第一首歌
           const info = new TrackAndPrivilege()
-          info.track =this.dailySong[0] as ESObject as Track
+          info.track = this.dailySong[0] as ESObject as Track
           info.privilege = this.dailySong[0].privilege as ESObject as Privilege
           AppStorage.setOrCreate("Track", info)
           router.pushUrl({
@@ -337,12 +337,12 @@ struct Daily {
   TrackItem(track: DailySong, index: number) {
     if (this.appearItems.includes(index)) {
       Row() {
-        if(this.isSelectMode) {
+        if (this.isSelectMode) {
           Row() {
             Checkbox()
               .select(this.selectedTracks.has(track.id))
               .onChange((value: boolean) => {
-                if(value) {
+                if (value) {
                   this.selectedTracks.add(track.id)
                 } else {
                   this.selectedTracks.delete(track.id)
@@ -357,12 +357,12 @@ struct Daily {
           artist: track.ar as ESObject as Artist[],
           coverUrl: cover(track.al.picUrl, 100),
           index: this.isSelectMode ? -1 : index,
-          showIndex:!this.isSelectMode,
+          showIndex: !this.isSelectMode,
           tns: track.tns,
-          disabled: !track.privilege || track.privilege.st < 0,
+          disabled: !isTrackPlayableWithParams(track as ESObject as Track, track.privilege as ESObject as Privilege).isPlayable,
           active: (!!this.track && this.track.track.id == track.id) ?? false,
-          rightSlot:() => {
-            if(!this.isSelectMode) {
+          rightSlot: () => {
+            if (!this.isSelectMode) {
               this.MoreActions(track)
             }
           }
@@ -380,9 +380,9 @@ struct Daily {
             curve: Curve.ExtremeDeceleration
           })
           .onClick(() => {
-            if(this.isSelectMode) {
+            if (this.isSelectMode) {
               // 多选模式下点击切换选中状态
-              if(this.selectedTracks.has(track.id)) {
+              if (this.selectedTracks.has(track.id)) {
                 this.selectedTracks.delete(track.id)
               } else {
                 this.selectedTracks.add(track.id)
@@ -391,26 +391,29 @@ struct Daily {
             }
 
             // 非多选模式下的播放逻辑
-            if (track.privilege && track.privilege.st >= 0) {
-              const info = new TrackAndPrivilege()
-              info.track = track as ESObject as Track
-              info.privilege = track.privilege as ESObject as Privilege
-              // 添加播放列表
-              const tempSongs: TrackAndPrivilege[] = []
-              this.dailySong?.forEach((song) => {
-                const info = new TrackAndPrivilege()
-                info.track = song as ESObject as Track
-                info.privilege = song.privilege as ESObject as Privilege
-                tempSongs.push(info)
-              })
-              globalPlaylist.overwrite(tempSongs, index)
-              AppStorage.setOrCreate("Track", info)
-              router.pushUrl({
-                url: "pages/Playing",
-              })
-            } else {
-              promptAction.showToast({ message: "灰标歌曲，无法播放" })
+            const info = new TrackAndPrivilege()
+            info.track = track as ESObject as Track
+            info.privilege = track.privilege as ESObject as Privilege
+
+            const playableResult = isTrackPlayableWithParams(info.track, info.privilege)
+            if (!playableResult.isPlayable) {
+              promptAction.showToast({ message: playableResult.reason })
+              return
             }
+
+            // 添加播放列表
+            const tempSongs: TrackAndPrivilege[] = []
+            this.dailySong?.forEach((song) => {
+              const info = new TrackAndPrivilege()
+              info.track = song as ESObject as Track
+              info.privilege = song.privilege as ESObject as Privilege
+              tempSongs.push(info)
+            })
+            globalPlaylist.overwrite(tempSongs, index)
+            AppStorage.setOrCreate("Track", info)
+            router.pushUrl({
+              url: "pages/Playing",
+            })
           })
       }
       .width('100%')

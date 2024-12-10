@@ -67,6 +67,5 @@ export struct DailyRecommendCard {
     .height(100)
     .clip(true)
     .borderRadius(16)
-    .backgroundColor('#000')
   }
 }

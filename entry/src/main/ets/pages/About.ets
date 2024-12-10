@@ -5,8 +5,8 @@ import { promptAction } from '@kit.ArkUI'
 @Entry
 @Component
 struct About {
-  @State version: string = '1.0.0'
-  @State buildDate: string = '2024-11-16'
+  @State version: string = '1.0.4.4/下个版本有超超超大更新'
+  @State buildDate: string = '2024-11-29'
 
   @Builder
   Header() {
@@ -90,23 +90,43 @@ struct About {
         .fontSize(14)
         .fontColor($r('app.color.primary_blue'))
         .fontWeight(FontWeight.Medium)
-        .onClick(() => {
-          pasteboard.createData('text/plain', "https://github.com/Okysu/harmony-next-music-sharing")
-          promptAction.showToast({
-            message: "已复制到剪切板",
-          })
-        })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Center)
     .margin({ bottom: 32 })
   }
 
+  @Builder
+  Credits() {
+    Column() {
+      Text('鸣谢')
+        .fontSize(16)
+        .fontWeight(FontWeight.Medium)
+        .fontColor($r('app.color.text_primary'))
+        .margin({ bottom: 8 })
+
+      Text('Logo 设计：△皂')
+        .fontSize(14)
+        .fontColor($r('app.color.text_secondary'))
+        .textAlign(TextAlign.Center)
+        .margin({ left: 32, right: 32 })
+        .lineHeight(20)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Center)
+    .padding({ top: 24, bottom: 24 })
+    .borderRadius(16)
+    .backgroundColor($r('app.color.card_background'))
+    .margin({ left: 16, right: 16, top: 12 }) // 添加上边距，与免责声明保持间距
+  }
+
+
   build() {
     Column() {
       this.Header()
       this.AppInfo()
       this.Disclaimer()
+      this.Credits()
 
       // Spacer
       Blank()

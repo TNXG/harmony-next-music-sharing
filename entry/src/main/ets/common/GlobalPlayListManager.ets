@@ -527,6 +527,12 @@ class GlobalPlaylist {
 
   public insertTop(song: TrackAndPrivilege): void {
     if (this.isExist(song)) {
+      // 如果已存在，移动到顶部
+      const index = this.findSongIndexById(song.track.id)
+      if (index !== -1) {
+        this.moveSong(index, 0)
+        this.setCurrentSongIndex(0)
+      }
       return
     }
     this.insertSong(song, 0)

@@ -84,16 +84,16 @@ export class ChargeInfo {
 @Observed
 export class Privilege {
   id: number = 0;
-  // fee: number = 0;
+  fee: number = 0;
   // payed: number = 0;
   // realPayed: number = 0;
   st: number = 0;
-  // pl: number = 0;
+  pl: number = 0;
   // dl: number = 0;
   // sp: number = 0;
   // cp: number = 0;
   // subp: number = 0;
-  // cs: boolean = false;
+  cs: boolean = false;
   // maxbr: number = 0;
   // fl: number = 0;
   // toast: boolean = false;
@@ -115,16 +115,16 @@ export class Privilege {
   constructor(privilege?: Privilege) {
     if (privilege !== undefined) {
       this.id = privilege.id;
-      // this.fee = privilege.fee;
+      this.fee = privilege.fee;
       // this.payed = privilege.payed;
       // this.realPayed = privilege.realPayed;
       this.st = privilege.st;
-      // this.pl = privilege.pl;
+      this.pl = privilege.pl;
       // this.dl = privilege.dl;
       // this.sp = privilege.sp;
       // this.cp = privilege.cp;
       // this.subp = privilege.subp;
-      // this.cs = privilege.cs;
+      this.cs = privilege.cs;
       // this.maxbr = privilege.maxbr;
       // this.fl = privilege.fl;
       // this.toast = privilege.toast;
@@ -160,7 +160,7 @@ export class Track {
   // pop: number = 0;
   // st: number = 0;
   // rt: string = '';
-  // fee: number = 0;
+  fee: number = 0;
   // v: number = 0;
   // cf: string = '';
   al: Album = new Album();
@@ -184,6 +184,7 @@ export class Track {
   // mv: number = 0;
   // publishTime: number = 0;
   tns?: string[];
+  noCopyrightRcmd? : null | object;
 
   constructor(track?: Track) {
     if (track !== undefined) {
@@ -196,7 +197,7 @@ export class Track {
       // this.pop = track.pop;
       // this.st = track.st;
       // this.rt = track.rt;
-      // this.fee = track.fee;
+      this.fee = track.fee;
       // this.v = track.v;
       // this.cf = track.cf;
       this.al = new Album(track.al);
@@ -220,6 +221,7 @@ export class Track {
       // this.mv = track.mv;
       // this.publishTime = track.publishTime;
       this.tns = track.tns;
+      this.noCopyrightRcmd = track?.noCopyrightRcmd;
     }
   }
 }

@@ -16,8 +16,9 @@ export struct SearchBar {
         Search({
           value: this.searchText,
           placeholder: this.placeholder,
-          controller: this.searchController
+          controller: this.searchController,
         })
+          .focusable(false)
           .width(this.barWidth)
           .height(40)
           .placeholderColor($r('app.color.search_placeholder'))
