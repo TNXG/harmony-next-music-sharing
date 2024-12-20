@@ -1,12 +1,10 @@
 import { StyleConstants } from '../common/Constant'
-import pasteboard from '@ohos.pasteboard'
-import { promptAction } from '@kit.ArkUI'
 
 @Entry
 @Component
 struct About {
-  @State version: string = '1.0.4.4/下个版本有超超超大更新'
-  @State buildDate: string = '2024-11-29'
+  @State version: string = '1.0.4.6/下个版本有超超超大更新'
+  @State buildDate: string = '2024-12-20'
 
   @Builder
   Header() {
@@ -63,7 +61,7 @@ struct About {
         .fontColor($r('app.color.text_primary'))
         .margin({ bottom: 8 })
 
-      Text('此为第三方客户端，不会获取你的任何隐私数据，不存在破解越权行为。')
+      Text('此为第三方数据展示平台，一切信息均有你的API服务器提供返回而呈现，请合理开发API服务器。')
         .fontSize(14)
         .fontColor($r('app.color.text_secondary'))
         .textAlign(TextAlign.Center)

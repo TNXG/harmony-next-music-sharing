@@ -5,10 +5,10 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "storePassword": "000000192AA3AD6D93A9DD09EDAA5559FDECACF64127DB6870C287DE931A2150A4E01394AA61CCEDAA",
+          "storePassword": "00000019DE53A35BD94E4E95B4BC55B5DB80D2FCB08FF6BEDF71BA3727161BF208676A80E59A782CDE",
           "certpath": "C:/Users/10423/Key/云享社.cer",
           "keyAlias": "SeaMusic",
-          "keyPassword": "000000195988FA0137BF308273C7FA9F4F36DE123038AE2B0C3DEA97AD7FEB5502E48D978DF49C2477",
+          "keyPassword": "000000194400B65D63C6020697E2D211F62FC158F9641DAE236042DF89D966D1504CE949AA6A371D66",
           "profile": "C:/Users/10423/Key/云享社Release.p7b",
           "signAlg": "SHA256withECDSA",
           "storeFile": "C:/Users/10423/Key/SeaMusic.p12"

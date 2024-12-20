@@ -1,4 +1,5 @@
 import { Artist } from "./Toplist";
+import { Type } from "@ohos.arkui.StateManagement";
 
 /**
  * 专辑信息

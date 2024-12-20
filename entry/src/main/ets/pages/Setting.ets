@@ -86,7 +86,6 @@ struct Settings {
   @State autoCache: boolean = PreferencesUtil.get<boolean>("autoCache") ?? false
   @State forceWebApi: boolean = PreferencesUtil.get<boolean>("forceWebApi") ?? false
   @State ignoreGray: boolean = PreferencesUtil.get<boolean>("ignoreGray") ?? false
-
   dialogController: CustomDialogController = new CustomDialogController({
     builder: UrlInputDialog({
       cancel: () => {
@@ -200,7 +199,6 @@ struct Settings {
     }
   }
 
-
   @Builder
   AutoCacheSetting() {
     Column() {
@@ -283,7 +281,7 @@ struct Settings {
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           } else {
-            Text('使用默认服务器')
+            Text('请立即填写API服务器，否则功能无法正常使用')
               .fontSize(14)
               .fontColor($r('app.color.text_secondary'))
               .margin({ top: 4 })
@@ -307,7 +305,7 @@ struct Settings {
             PreferencesUtil.delete('customURL')
             this.customApiUrl = ''
             updateBaseURL()
-            promptAction.showToast({ message: '已恢复默认服务器' })
+            promptAction.showToast({ message: '请及时填写API服务器，否则功能无法正常使用' })
           })
         }
 
@@ -389,6 +387,47 @@ struct Settings {
     })
   }
 
+  @Builder
+  CacheClear() {
+    Column() {
+      Row() {
+        Text('清除所有请求缓存')
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.text_primary'))
+      }
+      .width('100%')
+      .padding(16)
+      .backgroundColor($r('app.color.card_background_two'))
+      .borderRadius(12)
+      .shadow({
+        radius: 12,
+        color: $r('app.color.card_shadow'),
+        offsetX: 0,
+        offsetY: 2
+      })
+    }.onClick(() => {
+      const caches = PreferencesUtil.getAll()
+      if (!caches) {
+        promptAction.showToast({ message: '没有可以清除缓存' })
+        return
+      }
+      // 获取所有key为url_开头的缓存
+      const cacheKeys = Object.keys(caches).filter(key => key.startsWith('url_'))
+
+      if (cacheKeys.length === 0) {
+        promptAction.showToast({ message: '没有可以清除缓存' })
+        return
+      }
+
+      cacheKeys.forEach(key => {
+        PreferencesUtil.delete(key)
+      })
+
+      promptAction.showToast({ message: `已清除${cacheKeys.length}条缓存` })
+    })
+  }
+
   build() {
     Column() {
       Row() {
@@ -412,6 +451,7 @@ struct Settings {
           this.AutoCacheSetting()
           this.ForceWebApiSetting()
           this.IgnoreGraySetting()
+          this.CacheClear()
         }
         .width('100%')
         .padding(16)

@@ -173,7 +173,10 @@ async function startPlaySong(song: ChangeSong) {
     }
 
     const level = PreferencesUtil.get<QualityLevel>("defaultLevel") ?? "standard"
+    Logger.info("CacheNextSong", `Next song quality level: ${level}`)
     const confirmLevel = getSupportedQuality(track.privilege.dlLevel as QualityLevel, level)
+
+    Logger.info("CacheNextSong", `Next song confirm level: ${confirmLevel}`)
     const cache = cacheManager.get(`${track.track.id}_${confirmLevel}`)
     const autoCache = PreferencesUtil.get<boolean>("autoCache") ?? false;
 
@@ -187,6 +190,9 @@ async function startPlaySong(song: ChangeSong) {
         // 如果缓存文件不存在，走下载逻辑
         return await handleSongDownload(track, song.pause, confirmLevel, autoCache);
       }
+
+      // 输出一下保存的缓存信息
+      Logger.info("CacheNextSong", `Cached song: ${JSON.stringify(cache)}`)
 
       await avPlayerManager.playByPath(cache.path, song.pause)
       avPlayerManager.clearListener('onDurationChange')
@@ -312,6 +318,14 @@ function getAuth() {
   // 输出调试一下
   hilog.info(0x0000, 'testTag', 'cookie: %{public}s, signAt: %{public}s, profile: %{public}s', cookie, signAt,
     JSON.stringify(profile));
+
+  // 对上一个版本的兼容，如果用户已经登录了，但是没有设置自定义 URL，设置默认
+  if (PreferencesUtil.isInitialized()) {
+    if (isValidCookie) {
+      hilog.info(0x0000, 'testTag', '用户已登录，但未设置自定义 URL，设置默认 URL');
+      PreferencesUtil.put('customURL', Constant.BASE_URL);
+    }
+  }
 }
 
 function cached() {

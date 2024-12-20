@@ -1,6 +1,7 @@
 import { AccountProfile } from "../type/Account";
 import { Privilege, Track , TrackAndPrivilege } from "../type/Playlist";
 import Constant from "./Constant";
+import Logger from "./Logger";
 import { PreferencesUtil } from "./PreferenceUtil";
 
 export function cover(url: string, size = 100) {
@@ -16,7 +17,7 @@ export function shuffle<T>(arr: T[], count: number = arr.length): T[] {
   return shuffled.slice(0, count);
 }
 
-export type QualityLevel = "standard" | "higher" | "exhigh" | "lossless" | "hires";
+export type QualityLevel = "standard" | "higher" | "exhigh" | "lossless" | "hires"
 
 export const qualityLevels: QualityLevel[] =
   ["standard", "higher", "exhigh", "lossless", "hires"];
@@ -26,7 +27,7 @@ export const qualityBitrates: Record<QualityLevel, number> = {
   "higher": 192000,
   "exhigh": 320000,
   "lossless": 350000,
-  "hires": 999000
+  "hires": 999000,
 };
 
 // 音质显示名称
@@ -35,7 +36,7 @@ export const qualityDescriptions: Record<QualityLevel, string> = {
   "higher": "较高 (192kbps)",
   "exhigh": "极高 (320kbps)",
   "lossless": "无损",
-  "hires": "Hi-Res"
+  "hires": "Hi-Res",
 };
 
 export interface LevelList {
@@ -44,10 +45,16 @@ export interface LevelList {
   bitrate: number;
 }
 
+const unsupportedQuality = ["jyeffect","sky","dolby","jymaster"];
+
 export function getSupportedQuality(songMaxQuality: QualityLevel, userQuality: QualityLevel): QualityLevel {
-  // 如果用户传入了已删除的音质，默认返回标准音质
-  if (!qualityLevels.includes(userQuality)) {
-    return 'standard';
+
+  Logger.info('CacheNextSong', `songMaxQuality: ${songMaxQuality}, userQuality: ${userQuality}`);
+
+  const maxQuality = songMaxQuality.toString()
+  // 如果不支持的音质等级，返回用户选择的
+  if (unsupportedQuality.includes(maxQuality)) {
+    return userQuality;
   }
 
   const songMaxIndex = qualityLevels.indexOf(songMaxQuality);

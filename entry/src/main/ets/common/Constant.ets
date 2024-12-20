@@ -6,7 +6,7 @@ export default class Constant {
   static readonly ANIMATION_DURATION: number = 300;
   static readonly COOKIE_EXPIRY_DAYS = 180;
   static readonly DEFAULT_TIMEOUT = 60000;
-  static readonly BASE_URL: string = "https://music-proxy.coolers.fun/"
+  static readonly BASE_URL: string = "https://music.hello-world.icu/"
   static readonly DEFAULT_COVER: Resource[] = [
     $r('app.media.109951165422200291'),
     $r('app.media.109951165134386387'),

@@ -79,6 +79,8 @@ export struct Login {
 
   private anonymous = getAnonymous()
 
+  @State count:number = 0
+
   aboutToDisappear() {
     if (this.checkStatusTimer !== -1) {
       clearTimeout(this.checkStatusTimer)
@@ -202,27 +204,23 @@ export struct Login {
       // 二维码登录卡片
       Column() {
         Column() {
-          Text('扫码登录网易云账号')
+          Text('扫码登录账号')
             .fontSize(24)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.primary_blue'))
             .margin({ bottom: 8 })
 
-          Text('使用登录凭证获取完整视听体验')
+          Text('请按照规范对自定义API服务器添加基础验证')
             .fontSize(16)
             .fontColor($r('app.color.text_placeholder'))
 
-          Text('您只有拥有会员资格才可以浏览会员相关资源')
-            .fontSize(12)
-            .fontColor($r('app.color.text_placeholder'))
-            .margin({ top: 8 })
-            .fontWeight(StyleConstants.FONT_WEIGHT_SEVEN)
         }
         .alignItems(HorizontalAlign.Start)
         .width('100%')
         .padding(20)
         .onClick(() => {
           this.showLogin = true
+          this.showWebLogin = false
           this.createQRCode()
         })
       }
@@ -230,7 +228,7 @@ export struct Login {
       .backgroundColor($r('app.color.background_gray'))
       .borderRadius(16)
       .margin({ bottom: 12 })
-      .bindSheet($$this.showLogin, this.Login(), {
+      .bindSheet($$this.showLogin, this.showWebLogin ? this.WebLogin : this.Login, {
         showClose: false,
         detents: [SheetSize.MEDIUM, SheetSize.LARGE],
         dragBar: true,
@@ -241,70 +239,25 @@ export struct Login {
           }
         }
       })
+      .gesture(
+        LongPressGesture({ repeat: true, duration: 500 })
+          .onAction((event: GestureEvent) => {
+            this.count++
+            if (this.count === 3) {
+              this.showWebLogin = true
+              this.showLogin = true
+            }
+          })
 
-      // 网页登录卡片
-      Column() {
-        Column() {
-          Text('网页登录网易云账号')
-            .fontSize(24)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.primary_blue'))
-            .margin({ bottom: 8 })
+          .onActionEnd((event: GestureEvent) => {
+            this.count = 0
+            this.showWebLogin = false
+          })
+      )
 
-          Text('使用网易云音乐官网登录')
-            .fontSize(16)
-            .fontColor($r('app.color.text_placeholder'))
 
-          Text('可使用手机号、邮箱或其他方式登录')
-            .fontSize(12)
-            .fontColor($r('app.color.text_placeholder'))
-            .margin({ top: 8 })
-            .fontWeight(StyleConstants.FONT_WEIGHT_SEVEN)
-        }
-        .alignItems(HorizontalAlign.Start)
-        .width('100%')
-        .padding(20)
-        .onClick(() => {
-          this.showWebLogin = true
-        })
-      }
-      .width('90%')
-      .backgroundColor($r('app.color.background_gray'))
-      .borderRadius(16)
-      .margin({ bottom: 12 })
-      .bindSheet($$this.showWebLogin, this.WebLogin(), {
-        showClose: false,
-        detents: [SheetSize.LARGE],
-        dragBar: true,
-        backgroundColor: $r('app.color.dialog_background')
-      })
 
-      // 搜索卡片
-      Column() {
-        Column() {
-          Text('搜索您的网易云账号')
-            .fontSize(24)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.primary_blue'))
-            .margin({ bottom: 8 })
-
-          Text('只能获取账号公开数据')
-            .fontSize(16)
-            .fontColor($r('app.color.text_placeholder'))
-        }
-        .alignItems(HorizontalAlign.Start)
-        .width('100%')
-        .padding(20)
-      }
-      .width('90%')
-      .backgroundColor($r('app.color.background_gray'))
-      .borderRadius(16)
-      .margin({ bottom: 32 })
-      .onClick(() => {
-        promptAction.showToast({ message: "暂未开放" })
-      })
-
-      Text('使用自己的 API 服务器')
+      Text('设置 API 服务器')
         .fontSize(14)
         .fontColor($r('app.color.text_placeholder'))
         .margin({ bottom: 20 })
@@ -383,11 +336,6 @@ export struct Login {
           .borderRadius(20)
           .backgroundColor(this.isCreatingQR ? $r('app.color.disabled_button') : $r('app.color.secondary_blue'))
       }
-
-      Text('使用网易云音乐 App 扫码登录')
-        .fontSize(14)
-        .fontColor($r('app.color.text_tertiary'))
-        .margin({ top: 20 })
     }
     .width('100%')
     .padding({ top: 12, bottom: 20 })

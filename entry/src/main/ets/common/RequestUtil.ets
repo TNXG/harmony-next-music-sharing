@@ -2,6 +2,7 @@ import axios, { AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosInst
 import Logger from './Logger';
 import Constant from './Constant';
 import { PreferencesUtil } from './PreferenceUtil';
+import { PromptAction, promptAction, router } from "@kit.ArkUI";
 
 const TAG = "RequestUtil";
 
@@ -11,6 +12,7 @@ type ResponseInterceptorFn = (response: AxiosResponse) => AxiosResponse;
 type ErrorHandlerFn = (error: AxiosError) => Promise<AxiosError>;
 
 interface RequestInterceptors {
+  setCustomURL: RequestInterceptorFn;
   addTimestamp: RequestInterceptorFn;
   addRealIp: RequestInterceptorFn;
   handleAuth: RequestInterceptorFn;
@@ -47,8 +49,27 @@ const addUrlParameter =
     return config;
   };
 
+
+let isForceSetCustomURL = false;
+
 // 请求拦截器
 const requestInterceptors: RequestInterceptors = {
+
+  setCustomURL: (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
+    const customURL = PreferencesUtil.get<string>('customURL');
+    // 如果没有自定义 URL，跳转设置页面，不发送请求
+    if (!customURL && !isForceSetCustomURL) {
+      Logger.error(TAG, 'Custom URL not set');
+      router.pushUrl({ url: 'pages/Setting' });
+
+      promptAction.showToast({ message: '请先设置自定义 URL' });
+
+      isForceSetCustomURL = true;
+    }
+
+    return config;
+  },
+
   addTimestamp: (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
     return addUrlParameter(config, '_t', Date.now().toString());
   },
@@ -188,7 +209,12 @@ const createCacheAdapter = () => {
 // 响应拦截器
 const responseInterceptors: ResponseInterceptors = {
   handleResponse: (response: AxiosResponse): AxiosResponse => {
-    Logger.info(TAG, JSON.stringify(response));
+    const responseStr = JSON.stringify(response);
+    // 分段打印日志，避免日志过长
+    const maxLength = 2000;
+    for (let i = 0; i < responseStr.length; i += maxLength) {
+      Logger.info(TAG, responseStr.slice(i, i + maxLength));
+    }
     return response;
   },
 
@@ -209,6 +235,7 @@ const createAxiosInstance = (isAnonymous = false): AxiosInstance => {
   });
 
   // 添加通用拦截器
+  instance.interceptors.request.use(requestInterceptors.setCustomURL);
   instance.interceptors.request.use(requestInterceptors.addTimestamp);
   instance.interceptors.request.use(requestInterceptors.addRealIp);
   instance.interceptors.request.use(requestInterceptors.addCrypto);

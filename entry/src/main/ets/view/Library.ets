@@ -62,9 +62,40 @@ export struct Library {
             Text(`${this.profile.nickname}的音乐库`)
               .font({ size: 20, weight: StyleConstants.FONT_WEIGHT_SEVEN })
               .fontColor($r('app.color.text_primary'))
+              .maxLines(1)
+              .ellipsisMode(EllipsisMode.CENTER)
           }
           .padding({ left: 16, right: 16 })
           .justifyContent(FlexAlign.SpaceBetween)
+          .bindMenu([
+            {
+              value: '退出登录',
+              action: () => {
+                PreferencesUtil.delete("account")
+                PreferencesUtil.delete("profile")
+                PreferencesUtil.delete("cookie")
+                PreferencesUtil.delete("signAt")
+                AppStorage.set('ValidCookie', false)
+                AppStorage.set('Profile', null)
+              }
+            },
+            {
+              value: '软件设置',
+              action: () => {
+                router.pushUrl({
+                  url: "pages/Setting"
+                })
+              }
+            },
+            {
+              value: '关于软件',
+              action: () => {
+                router.pushUrl({
+                  url: "pages/About"
+                })
+              }
+            },
+          ])
 
           Row() {
             this.Avatar(this.profile)
