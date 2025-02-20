@@ -356,7 +356,7 @@ export class SongUrl {
   id: number = 0;
   url: string = '';
   // br: number = 0;
-  // size: number = 0;
+  size: number = 0;
   // md5: string = '';
   // code: number = 0;
   // expi: number = 0;
@@ -379,7 +379,7 @@ export class SongUrl {
       this.id = songUrl.id;
       this.url = songUrl.url;
       // this.br = songUrl.br;
-      // this.size = songUrl.size;
+      this.size = songUrl.size;
       // this.md5 = songUrl.md5;
       // this.code = songUrl.code;
       // this.expi = songUrl.expi;

@@ -2,7 +2,8 @@ import { avPlayerManager } from "../common/AVPlayerManager"
 import { LyricLine, LyricResponse } from '../type/Song'
 import { EventBus } from '../common/EventBus'
 import { BreakPointType } from "../common/BreakpointSystem"
-import { PreferencesUtil } from "../common/PreferenceUtil";
+import { PreferencesUtil } from "../common/PreferenceUtil"
+
 
 interface Lyric {
   time: number;
@@ -32,6 +33,7 @@ export struct LyricView {
   private updateTimer: number = -1
   private playerManager = avPlayerManager
   private readonly ANIMATION_DURATION: number = 300
+
   // 基础字号配置
   private baseFontSize = new BreakPointType({
     sm: 18,
@@ -88,14 +90,12 @@ export struct LyricView {
     })
   }
 
-  // 计算高亮程度（0-1之间）
   private calculateHighlightProgress(currentTime: number, startTime: number, endTime: number): number {
     const duration = endTime - startTime
     const elapsed = currentTime - startTime
     return Math.min(1, Math.max(0, elapsed / Math.min(duration, this.ANIMATION_DURATION)))
   }
 
-  // 更新当前高亮的歌词索引
   private updateCurrentIndex(currentTime: number) {
     let newIndex = this.parsedLyrics.findIndex((item, index) => {
       const nextItem = this.parsedLyrics[index + 1]
@@ -103,24 +103,30 @@ export struct LyricView {
     })
 
     if (newIndex !== -1) {
-      // 计算过渡动画进度
       const currentLyric = this.parsedLyrics[newIndex]
       const nextLyric = this.parsedLyrics[newIndex + 1]
-      const endTime = nextLyric ? nextLyric.time : currentLyric.time + 5000 // 如果是最后一句，假设持续5秒
+      const endTime = nextLyric ? nextLyric.time : currentLyric.time + 5000
 
-      this.highlightProgress = this.calculateHighlightProgress(
-        currentTime,
-        currentLyric.time,
-        endTime
-      )
+      animateTo({
+        duration: 300,
+        curve: Curve.EaseInOut,
+        onFinish: () => {
+          this.highlightProgress = this.calculateHighlightProgress(
+            currentTime,
+            currentLyric.time,
+            endTime
+          )
 
-      if (newIndex !== this.currentIndex) {
-        this.currentIndex = newIndex
-        // 只在用户不滚动时自动滚动
-        if (!this.isUserScrolling) {
-          this.scroller.scrollToIndex(Math.max(0, newIndex - 3))
+          if (newIndex !== this.currentIndex) {
+            this.currentIndex = newIndex
+            if (!this.isUserScrolling) {
+              this.scroller.scrollToIndex(Math.max(0, newIndex - 3))
+            }
+          }
         }
-      }
+      },
+        () =>{}
+      )
     }
   }
 
@@ -128,7 +134,12 @@ export struct LyricView {
     this.updateParsedLyrics()
 
     EventBus.listen<LyricResponse>('LyricsUpdated', (lyrics) => {
-      this.updateParsedLyrics()
+      animateTo({
+        duration: 300,
+        curve: Curve.EaseInOut
+      }, () => {
+        this.updateParsedLyrics()
+      })
     })
 
     this.updateTimer = setInterval(async () => {
@@ -147,7 +158,6 @@ export struct LyricView {
     }
   }
 
-  // 计算高亮样式
   private getHighlightStyle(index: number): HighlightStyle {
     const isCurrentLine = index === this.currentIndex
     const progress = isCurrentLine ? this.highlightProgress : 0
@@ -155,10 +165,10 @@ export struct LyricView {
     const adjustedFontSize = baseFontSize * this.fontSize
 
     return {
-      fontSize: adjustedFontSize + (4 * progress * this.fontSize),
+      fontSize: adjustedFontSize ,
       fontWeight: isCurrentLine ? FontWeight.Bold : FontWeight.Normal,
       fontColor: isCurrentLine ? Color.White : 'rgba(255, 255, 255, 0.5)',
-      background: isCurrentLine ? `rgba(255, 255, 255, )` : 'transparent'
+      background: isCurrentLine ? `rgba(255, 255, 255, ${0.1 * progress})` : 'transparent'
     } as HighlightStyle
   }
 
@@ -176,8 +186,13 @@ export struct LyricView {
       .backgroundColor(Color.Transparent)
       .enabled(this.fontSize > 0.6)
       .onClick(() => {
-        this.fontSize = Math.max(0.8, this.fontSize - 0.2)
-        PreferencesUtil.put("lyricSize", this.fontSize)
+        animateTo({
+          duration: 300,
+          curve: Curve.EaseInOut
+        }, () => {
+          this.fontSize = Math.max(0.8, this.fontSize - 0.2)
+          PreferencesUtil.put("lyricSize", this.fontSize)
+        })
       })
 
       Text()
@@ -198,8 +213,13 @@ export struct LyricView {
       .backgroundColor(Color.Transparent)
       .enabled(this.fontSize < 5)
       .onClick(() => {
-        this.fontSize = Math.min(5, this.fontSize + 0.2)
-        PreferencesUtil.put("lyricSize", this.fontSize)
+        animateTo({
+          duration: 300,
+          curve: Curve.EaseInOut
+        }, () => {
+          this.fontSize = Math.min(5, this.fontSize + 0.2)
+          PreferencesUtil.put("lyricSize", this.fontSize)
+        })
       })
     }
     .height(48)
@@ -275,7 +295,7 @@ export struct LyricView {
           .width('100%')
           .layoutWeight(1)
           .scrollBar(BarState.Off)
-          .onWillScroll((scrollOffset: number, scrollState: ScrollState) => {
+          .onScroll((scrollOffset: number, scrollState: ScrollState) => {
             this.isUserScrolling = true
             if (this.userScrollTimer !== -1) {
               clearTimeout(this.userScrollTimer)
@@ -289,12 +309,11 @@ export struct LyricView {
       .width('100%')
       .height('100%')
 
-      // 固定在底部的字号控制栏
       Column() {
         this.FontSizeControls()
       }
       .position({ x: 0, y: '100%' })
-      .translate({ y: -16 })  // 控制栏高度
+      .translate({ y: -16 })
       .width('100%')
     }
     .width('100%')

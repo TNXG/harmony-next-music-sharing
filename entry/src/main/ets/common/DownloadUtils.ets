@@ -63,11 +63,14 @@ export class DownloadUtils {
         const downloadTask = await request.downloadFile(this.context!, {
           url: config.url,
           filePath: filePath
-        });
+        })
 
         return new Promise((resolve, reject) => {
           // 监听下载进度
-          downloadTask.on('progress', (receivedSize: number, totalSize: number) => {
+          downloadTask.on('progress', async (receivedSize: number, totalSize: number) => {
+            const access = await fs.access(filePath)
+            Logger.info("DownloadUtils", `Received: ${receivedSize}, Total: ${totalSize}`);
+            Logger.info("DownloadUtils", `Accessing: ${access}`);
             const progress = (receivedSize / totalSize) * 100;
             if (config.onProgress) {
               config.onProgress(progress);

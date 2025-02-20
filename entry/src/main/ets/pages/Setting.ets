@@ -1,6 +1,6 @@
 import { StyleConstants } from '../common/Constant'
 import { PreferencesUtil } from '../common/PreferenceUtil'
-import { promptAction } from '@kit.ArkUI'
+import { promptAction, router } from '@kit.ArkUI'
 import { qualityDescriptions, QualityLevel, qualityLevels, setIgnoreGray } from '../common/APIHelper'
 import { updateBaseURL } from '../common/RequestUtil'
 
@@ -86,6 +86,8 @@ struct Settings {
   @State autoCache: boolean = PreferencesUtil.get<boolean>("autoCache") ?? false
   @State forceWebApi: boolean = PreferencesUtil.get<boolean>("forceWebApi") ?? false
   @State ignoreGray: boolean = PreferencesUtil.get<boolean>("ignoreGray") ?? false
+
+
   dialogController: CustomDialogController = new CustomDialogController({
     builder: UrlInputDialog({
       cancel: () => {
@@ -260,6 +262,15 @@ struct Settings {
         this.selectedQuality = "standard"
         PreferencesUtil.put('defaultLevel', 'standard')
       }
+    }
+  }
+
+  onBackPress(): boolean | void {
+    // 如果没有自定义URL，不允许返回
+    const customURL = PreferencesUtil.get<string>('customURL')
+    if (!customURL) {
+      promptAction.showToast({ message: '请先设置自定义URL' })
+      return true
     }
   }
 

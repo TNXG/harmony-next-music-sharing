@@ -240,7 +240,6 @@ export struct PlaybackControlBar {
       detents: [SheetSize.MEDIUM, SheetSize.LARGE],
       dragBar: false,
       scrollSizeMode: ScrollSizeMode.CONTINUOUS,
-      backgroundColor: $r('app.color.playlist_bg'),
       preferType: SheetType.BOTTOM,
     })
   }

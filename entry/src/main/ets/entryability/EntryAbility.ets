@@ -25,6 +25,7 @@ import { avSession } from '@kit.AVSessionKit';
 import { backgroundRunningManager } from '../common/BackgroundRunningManager';
 import { audioFileSaver } from '../common/AudioFileSaver';
 import { SongCache } from '../type/Song';
+import { LyricParser } from '../common/LyricParser';
 
 // 发现页数据加载
 async function lookup() {
@@ -73,6 +74,8 @@ async function getLyric(id: number | string) {
   const res = await getSongLyric(id);
   AppStorage.setOrCreate("Lyrics", res)
   EventBus.send("LyricsUpdated")
+
+  return LyricParser.parseLyrics(res)
 }
 
 // 记录当前正在缓存的歌曲ID
@@ -202,15 +205,16 @@ async function startPlaySong(song: ChangeSong) {
           duration: duration,
           title: cache.name,
           mediaImage: cover(cache.coverImgUrl, 512),
-          artist: cache.artist.join("/")
-        })
+          artist: cache.artist.join("/"),
+          lyric: LyricParser.convertToLRC(await getLyric(cache.id))
+        }, true)
         AppStorage.setOrCreate("Track", track)
-        getLyric(track.track.id)
         if (autoCache) {
           cacheNextSong()
         }
       })
     } else {
+      Logger.info("DownloadUtils", `No cache found for song: ${track.track.id}`)
       await handleSongDownload(track, song.pause, confirmLevel, autoCache);
     }
 
@@ -249,7 +253,9 @@ async function handleSongDownload(
   }
 
   currentCachingId = track.track.id;
-  const url = (await getSongUrl(track.track.id)).data[0].url
+  const trackInfo = (await getSongUrl(track.track.id)).data[0]
+  const url = trackInfo.url
+  const trueSize = trackInfo.size
   if (!url) {
     currentCachingId = null;
     promptAction.showToast({
@@ -264,45 +270,71 @@ async function handleSongDownload(
     fileName = fileName.substring(0, index)
   }
 
-  const path = await downloadManager.downloadFile({
+  const filePath = `${getContext()!.filesDir}/${fileName}`;
+  Logger.info("DownloadUtils", `Downloading song: ${track.track.id}, url: ${url}, path: ${filePath}, size: ${trueSize}`)
+
+  await avPlayerManager.stop()
+
+  // 不等待下载完成,直接开始下载
+  downloadManager.downloadFile({
     url,
     fileName
+  });
+
+  // 等待文件创建
+  await new Promise<void>((resolve) => {
+    const checkFile = setInterval(async () => {
+      try {
+        const stats = await fs.stat(filePath);
+        const progress = (stats.size / trueSize) * 100;
+        if (progress >= 10) {
+          clearInterval(checkFile);
+          resolve();
+        }
+      } catch (err) {
+        // 文件还未创建,继续等待
+      }
+    }, 100);
+  });
+
+
+  // 文件已创建,开始播放
+  Logger.info("DownloadUtils", `Downloaded song: ${track.track.id}, path: ${filePath}`)
+  try {
+    await avPlayerManager.playByPath(filePath, pause, trueSize)
+  } catch (e) {
+    Logger.warn("DownloadUtils", e.message)
+  }
+
+
+  // 后续逻辑保持不变
+  avPlayerManager.clearListener('onDurationChange')
+  avPlayerManager.addListener('onDurationChange', async (duration: number) => {
+    await avPlayerManager.updateAVMetadata({
+      assetId: `track-${track.track.id}`,
+      duration: duration,
+      title: track.track.name,
+      mediaImage: cover(track.track.al.picUrl, 512),
+      artist: track.track.ar.map(item => item.name).join("/"),
+      lyric: LyricParser.convertToLRC(await getLyric(cache.id))
+    }, true)
+    AppStorage.setOrCreate("Track", track)
+    if (autoCache) {
+      cacheNextSong()
+    }
   })
 
   currentCachingId = null;
 
-  if (path) {
-    await avPlayerManager.playByPath(path, pause)
-    avPlayerManager.clearListener('onDurationChange')
-    avPlayerManager.addListener('onDurationChange', async (duration: number) => {
-      await avPlayerManager.updateAVMetadata({
-        assetId: `track-${track.track.id}`,
-        duration: duration,
-        title: track.track.name,
-        mediaImage: cover(track.track.al.picUrl, 512),
-        artist: track.track.ar.map(item => item.name).join("/")
-      })
-      AppStorage.setOrCreate("Track", track)
-      getLyric(track.track.id)
-      if (autoCache) {
-        cacheNextSong()
-      }
-    })
+  const cache = new SongCache()
+  cache.id = track.track.id
+  cache.level = confirmLevel
+  cache.name = track.track.name
+  cache.path = filePath
+  cache.coverImgUrl = track.track.al.picUrl
+  cache.artist = track.track.ar.map(item => item.name)
 
-    const cache = new SongCache()
-    cache.id = track.track.id
-    cache.level = confirmLevel
-    cache.name = track.track.name
-    cache.path = path
-    cache.coverImgUrl = track.track.al.picUrl
-    cache.artist = track.track.ar.map(item => item.name)
-
-    cacheManager.set(`${track.track.id}_${confirmLevel}`, cache)
-  } else {
-    promptAction.showToast({
-      message: "音乐资源获取失败!"
-    })
-  }
+  cacheManager.set(`${track.track.id}_${confirmLevel}`, cache)
 }
 
 function getAuth() {
@@ -321,7 +353,8 @@ function getAuth() {
 
   // 对上一个版本的兼容，如果用户已经登录了，但是没有设置自定义 URL，设置默认
   if (PreferencesUtil.isInitialized()) {
-    if (isValidCookie) {
+    const customURL = PreferencesUtil.get<string>('customURL');
+    if (isValidCookie && !customURL) {
       hilog.info(0x0000, 'testTag', '用户已登录，但未设置自定义 URL，设置默认 URL');
       PreferencesUtil.put('customURL', Constant.BASE_URL);
     }
@@ -511,12 +544,11 @@ export default class EntryAbility extends UIAbility {
     // Main window is created, set main page for this ability
     hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
 
-    const notFirstStart = PreferencesUtil.get<boolean>("notFirstStart")
+    const confirmPolicy = PreferencesUtil.get<boolean>("confirmPolicy")
 
-    if (!notFirstStart) {
-      PreferencesUtil.put("notFirstStart", true)
+    if (!confirmPolicy) {
       PreferencesUtil.put("defaultLevel", "standard")
-      windowStage.loadContent('pages/Splash', (err) => {
+      windowStage.loadContent('pages/Policy', (err) => {
         if (err.code) {
           hilog.error(0x0000, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err) ?? '');
           return;
@@ -525,6 +557,7 @@ export default class EntryAbility extends UIAbility {
       });
       return
     }
+
 
     windowStage.loadContent('pages/Index', (err) => {
       if (err.code) {

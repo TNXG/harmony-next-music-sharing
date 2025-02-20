@@ -1,12 +1,14 @@
 import { BreakpointSystem } from '../common/BreakpointSystem';
 import { BreakpointConstants, StyleConstants, PageConstants, } from '../common/Constant'; // 通用工具
 import { EventBus } from '../common/EventBus';
+import { PreferencesUtil } from '../common/PreferenceUtil';
 import { PlaybackControlBar } from '../component/PlaybackControlBar';
 import { TrackAndPrivilege } from '../type/Playlist';
 import { Cached } from '../view/Cached';
 import { Library } from '../view/Library';
 import { LookUp } from '../view/LookUp';
 import { buttonInfo, ButtonInfoModel } from '../viewmodel/BottomButtonData'; // 底部导航数据
+import { promptAction, router } from '@kit.ArkUI';
 
 
 @Entry
@@ -17,6 +19,7 @@ struct Index {
   @StorageLink("Track") track: TrackAndPrivilege | null = null
   private breakpointSystem = new BreakpointSystem();
   private controller: TabsController = new TabsController()
+
 
   async aboutToAppear() {
     this.breakpointSystem.register();

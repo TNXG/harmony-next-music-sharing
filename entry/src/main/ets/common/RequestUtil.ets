@@ -65,6 +65,11 @@ const requestInterceptors: RequestInterceptors = {
       promptAction.showToast({ message: '请先设置自定义 URL' });
 
       isForceSetCustomURL = true;
+
+      // 设置超时，避免重复跳转
+      setTimeout(() => {
+        isForceSetCustomURL = false;
+      }, 1000);
     }
 
     return config;
@@ -227,7 +232,7 @@ const responseInterceptors: ResponseInterceptors = {
 // 创建请求实例的函数
 const createAxiosInstance = (isAnonymous = false): AxiosInstance => {
   Logger.info('RequestUtil', `CustomURL Using ${PreferencesUtil.get<string>('customURL')}`);
-  const baseUrl = PreferencesUtil.get<string>('customURL') || Constant.BASE_URL
+  const baseUrl = PreferencesUtil.get<string>('customURL');
   const instance = axios.create({
     baseURL: baseUrl,
     timeout: Constant.DEFAULT_TIMEOUT,

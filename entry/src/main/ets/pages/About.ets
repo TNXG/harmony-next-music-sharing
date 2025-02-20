@@ -3,8 +3,8 @@ import { StyleConstants } from '../common/Constant'
 @Entry
 @Component
 struct About {
-  @State version: string = '1.0.4.6/下个版本有超超超大更新'
-  @State buildDate: string = '2024-12-20'
+  @State version: string = '1.0.4.6(patch01)/下个版本有超超超大更新，新年快乐'
+  @State buildDate: string = '2025-01-27'
 
   @Builder
   Header() {

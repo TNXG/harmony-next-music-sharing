@@ -7,6 +7,7 @@
     "pages/Daily",
     "pages/Setting",
     "pages/About",
-    "pages/CloudSearch"
+    "pages/CloudSearch",
+    "pages/Policy"
   ]
 }

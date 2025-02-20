@@ -91,7 +91,7 @@ struct Splash {
             curve: Curve.EaseInOut
           })
           .onClick(() => {
-            router.pushUrl({ url: 'pages/Index' })
+            router.replaceUrl({ url: 'pages/Index' })
           })
       }
       .translate({ y: this.contentTranslateY })

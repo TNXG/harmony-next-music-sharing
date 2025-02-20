@@ -4,7 +4,7 @@ import { audio } from '@kit.AudioKit';
 import { common } from '@kit.AbilityKit';
 import Logger from './Logger';
 import { globalPlaylist, PlayMode } from './GlobalPlayListManager';
-import { fileIo as fs } from '@kit.CoreFileKit';
+import { fileIo as fs, ReadOptions } from '@kit.CoreFileKit';
 import { EventBus } from './EventBus';
 
 // 定义回调函数的类型
@@ -26,8 +26,9 @@ class AVPlayerManager {
   private avSession: avSession.AVSession | null = null;
   private currentPlaybackState: avSession.PlaybackState = avSession.PlaybackState.PLAYBACK_STATE_PAUSE;
   private context: common.UIAbilityContext | undefined;
-
   private formCached = false // 如果从缓存中打开
+
+  private cachedAvMetadata: avSession.AVMetadata | null = null; // 缓存的元数据
   // 初始化所有回调为空数组
   private callbacks: PlayerCallbacks = {
     onPlay: [],
@@ -506,18 +507,64 @@ class AVPlayerManager {
     return this.avPlayer;
   }
 
-  async playByPath(path: string, formCached: number, metadata?: avSession.AVMetadata) {
+  async playByPath(path: string, formCached: number, trueSize?: number, metadata?: avSession.AVMetadata) {
     try {
       this.formCached = formCached == 1
       const player = await this.getAVPlayerInstance();
       await player.reset();
-      // 使用文件描述符播放
+
       const file = fs.openSync(path, fs.OpenMode.READ_ONLY);
-      player.fdSrc = {
-        fd: file.fd,
-        offset: 0,
-        length: (fs.statSync(path)).size
-      };
+
+      if (trueSize === undefined) {
+        player.fdSrc = {
+          fd: file.fd,
+          offset: 0,
+          length: (fs.statSync(path)).size
+        };
+      } else {
+        // 使用dataSrc流式播放
+        player.dataSrc = {
+          fileSize: trueSize,
+          callback: (buffer: ArrayBuffer, length: number, pos?: number): number => {
+            if (buffer == undefined || length == undefined || pos == undefined) {
+              Logger.error('AVPlayer', 'dataSrc callback param invalid');
+              return -1;
+            }
+            try {
+              // 检查seek位置是否已下载
+              const stats = fs.statSync(path); // 获取最新文件大小
+              if (pos >= stats.size) {
+                // seek位置超出当前已下载大小
+                Logger.info('AVPlayer', `Waiting for data at position ${pos}, current size ${stats.size}`);
+                return 0; // 返回0让播放器等待
+              }
+
+              const readOptions: ReadOptions  = {
+                offset: pos,
+                length: length,
+              };
+
+              // 同步读取文件数据
+              const readLength = fs.readSync(file.fd, buffer, readOptions);
+              Logger.info('AVPlayer', `Read data: ${readLength} bytes at position ${pos}`);
+
+              if (readLength > 0) {
+                return readLength;
+              }
+
+              // 到达文件末尾但可能还在下载
+              if (pos < stats.size) {
+                return 0; // 还有数据,让播放器等待
+              }
+
+              return -1; // 真正的文件结束
+            } catch (error) {
+              Logger.error('AVPlayer', `Read error: ${error.message}`);
+              return -2; // 不可恢复的错误
+            }
+          }
+        }
+      }
 
       if (metadata && this.avSession) {
         await this.avSession.setAVMetadata(metadata);
@@ -548,9 +595,22 @@ class AVPlayerManager {
     }
   }
 
-  async updateAVMetadata(metadata: avSession.AVMetadata) {
+  async updateAVMetadata(metadata: avSession.AVMetadata, defaultMetadata?: boolean) {
     if (this.avSession) {
       await this.avSession.setAVMetadata(metadata);
+      if (defaultMetadata) {
+        this.cachedAvMetadata = metadata;
+      }
+    }
+  }
+
+  async updateMetadataLyric(lyric: string) {
+    if (this.avSession) {
+      const metadata = this.cachedAvMetadata;
+      if (metadata) {
+        metadata.lyric = lyric;
+        await this.avSession.setAVMetadata(metadata);
+      }
     }
   }
 
