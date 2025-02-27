@@ -1,4 +1,4 @@
-# NetEase Cloud Music Third-party Client
+#  Cloud Music client
 
 [English](README_en.md) | [中文](README.md)
 
@@ -10,7 +10,7 @@
 </div>
 
 ## Introduction
-This is a third-party NetEase Cloud Music client based on HarmonyOS Next API 12. It provides a smooth and native experience while maintaining all the essential features you love from the original app.
+This is a Cloud Music client based on HarmonyOS Next API 12. It provides a smooth and native experience while maintaining all the essential features you love from the original app.
 
 ## Features
 - **Multiple Login Methods**
