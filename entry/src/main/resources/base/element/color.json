@@ -21,18 +21,6 @@
       "value": "#000000"
     },
     {
-      "name": "text_secondary",
-      "value": "#666666"
-    },
-    {
-      "name": "primary_blue",
-      "value": "#3478F6"
-    },
-    {
-      "name": "card_background",
-      "value": "#FFFFFF"
-    },
-    {
       "name": "card_background_two",
       "value": "#CCF3F3F3"
     },
@@ -89,10 +77,6 @@
       "value": "#FFFFFF"
     },
     {
-      "name": "secondary_blue",
-      "value": "#4080FF"
-    },
-    {
       "name": "background_gray",
       "value": "#F5F7FA"
     },
@@ -103,10 +87,6 @@
     {
       "name": "expired_mask",
       "value": "#B3000000"
-    },
-    {
-      "name": "disabled_button",
-      "value": "#182431"
     },
     {
       "name": "border_color",
@@ -271,6 +251,26 @@
     {
       "name": "suggestion_tag_bg",
       "value": "#F5F5F5"
+    },
+    {
+      "name": "background_page",
+      "value": "#F5F5F5"
+    },
+    {
+      "name": "primary_blue",
+      "value": "#2196F3"
+    },
+    {
+      "name": "secondary_blue",
+      "value": "#42A5F5"
+    },
+    {
+      "name": "text_secondary",
+      "value": "#757575"
+    },
+    {
+      "name": "disabled_button",
+      "value": "#BDBDBD"
     }
   ]
 }

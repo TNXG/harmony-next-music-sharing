@@ -1,0 +1,11 @@
+{
+  "app": {
+    "bundleName": "top.bm.tnxg.huawei",
+    "patchVersionCode": 2000014,
+    "versionCode": 1000020
+  },
+  "module": {
+    "name": "entry",
+    "type": "hotreload"
+  }
+}

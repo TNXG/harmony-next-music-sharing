@@ -353,10 +353,10 @@ function getAuth() {
 
   // 对上一个版本的兼容，如果用户已经登录了，但是没有设置自定义 URL，设置默认
   if (PreferencesUtil.isInitialized()) {
-    const customURL = PreferencesUtil.get<string>('customURL');
-    if (isValidCookie && !customURL) {
+    const biliCookies = PreferencesUtil.get<string>('biliCookies');
+    if (isValidCookie && !biliCookies) {
       hilog.info(0x0000, 'testTag', '用户已登录，但未设置自定义 URL，设置默认 URL');
-      PreferencesUtil.put('customURL', Constant.BASE_URL);
+      PreferencesUtil.put('biliCookies', Constant.BASE_URL);
     }
   }
 }

@@ -8,6 +8,7 @@
     "pages/Setting",
     "pages/About",
     "pages/CloudSearch",
-    "pages/Policy"
+    "pages/Policy",
+    "pages/Login"
   ]
 }

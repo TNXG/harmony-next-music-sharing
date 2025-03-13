@@ -12,7 +12,7 @@ type ResponseInterceptorFn = (response: AxiosResponse) => AxiosResponse;
 type ErrorHandlerFn = (error: AxiosError) => Promise<AxiosError>;
 
 interface RequestInterceptors {
-  setCustomURL: RequestInterceptorFn;
+  setbiliCookies: RequestInterceptorFn;
   addTimestamp: RequestInterceptorFn;
   addRealIp: RequestInterceptorFn;
   handleAuth: RequestInterceptorFn;
@@ -50,25 +50,25 @@ const addUrlParameter =
   };
 
 
-let isForceSetCustomURL = false;
+let isForceSetbiliCookies = false;
 
 // 请求拦截器
 const requestInterceptors: RequestInterceptors = {
 
-  setCustomURL: (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
-    const customURL = PreferencesUtil.get<string>('customURL');
+  setbiliCookies: (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
+    const biliCookies = PreferencesUtil.get<string>('biliCookies');
     // 如果没有自定义 URL，跳转设置页面，不发送请求
-    if (!customURL && !isForceSetCustomURL) {
+    if (!biliCookies && !isForceSetbiliCookies) {
       Logger.error(TAG, 'Custom URL not set');
       router.pushUrl({ url: 'pages/Setting' });
 
-      promptAction.showToast({ message: '请先设置自定义 URL' });
+      promptAction.showToast({ message: '请先登录' });
 
-      isForceSetCustomURL = true;
+      isForceSetbiliCookies = true;
 
       // 设置超时，避免重复跳转
       setTimeout(() => {
-        isForceSetCustomURL = false;
+        isForceSetbiliCookies = false;
       }, 1000);
     }
 
@@ -156,7 +156,7 @@ const createCacheAdapter = () => {
   ];
 
   const buildCacheKey = (url: string): string => {
-    // 移除 realIp 和时间戳参数
+    // 移除 realIp 和时间戳参数 
     const key = url.replace(/[?&]realIp=[^&]*/, '')
       .replace(/[?&]_t=\d+/, '')
       .replace(/[?&]$/, ''); // 清理末尾可能剩余的 ? 或 &
@@ -231,8 +231,8 @@ const responseInterceptors: ResponseInterceptors = {
 
 // 创建请求实例的函数
 const createAxiosInstance = (isAnonymous = false): AxiosInstance => {
-  Logger.info('RequestUtil', `CustomURL Using ${PreferencesUtil.get<string>('customURL')}`);
-  const baseUrl = PreferencesUtil.get<string>('customURL');
+  Logger.info('RequestUtil', `biliCookies Using ${PreferencesUtil.get<string>('biliCookies')}`);
+  const baseUrl = PreferencesUtil.get<string>('biliCookies');
   const instance = axios.create({
     baseURL: baseUrl,
     timeout: Constant.DEFAULT_TIMEOUT,
@@ -240,7 +240,7 @@ const createAxiosInstance = (isAnonymous = false): AxiosInstance => {
   });
 
   // 添加通用拦截器
-  instance.interceptors.request.use(requestInterceptors.setCustomURL);
+  instance.interceptors.request.use(requestInterceptors.setbiliCookies);
   instance.interceptors.request.use(requestInterceptors.addTimestamp);
   instance.interceptors.request.use(requestInterceptors.addRealIp);
   instance.interceptors.request.use(requestInterceptors.addCrypto);
