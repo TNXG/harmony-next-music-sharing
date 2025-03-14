@@ -1,45 +1,7 @@
-import axios from '@ohos/axios';
-import { PreferencesUtil } from '../common/PreferenceUtil';
-
-interface QRKeyResponseData {
-  url: string;
-  qrcode_key: string;
-}
-
-interface QRKeyResponse {
-  code: number;
-  message: string;
-  ttl: number;
-  data: QRKeyResponseData;
-}
-
-interface Cookie {
-  name: string;
-  value: string;
-  http_only: number;
-  expires: number;
-}
-
-interface CookieInfo {
-  cookies: Array<Cookie>;
-}
-
-interface QRPollResponseData {
-  refresh_token: string;
-  timestamp: number;
-  code: number;
-  message: string;
-  cookie_info?: CookieInfo;
-}
-
-interface QRPollResponse {
-  code: number;
-  message: string;
-  ttl: number;
-  data: QRPollResponseData;
-}
-
-const QR_POLL_INTERVAL = 3000;
+import { QR_STATUS, generateQRCode, pollQRStatus, saveCookies } from '../api/Bililogin';
+import { promptAction } from '@kit.ArkUI'
+import { PreferencesUtil } from '../common/PreferenceUtil'
+import { getBiliUserInfo } from '../api/Bililogin'
 
 @Entry
 @Component
@@ -48,8 +10,6 @@ export struct Login {
   @State qrCodeUrl: string = '';
   @State qrCodeKey: string = '';
   @State qrStatus: string = '等待扫码';
-  @State UserAgent: string =
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0';
   private pollTimer: number = -1;
 
   aboutToAppear() {
@@ -73,11 +33,9 @@ export struct Login {
     this.isCreatingQR = true;
     this.qrStatus = '等待扫码';
     try {
-      const response: QRKeyResponse =
-        (await axios.get('https://passport.bilibili.com/x/passport-login/web/qrcode/generate',
-          { headers: { 'User-Agent': this.UserAgent } })).data;
-      this.qrCodeUrl = response.data.url;
-      this.qrCodeKey = response.data.qrcode_key;
+      const response = await generateQRCode();
+      this.qrCodeUrl = response.url;
+      this.qrCodeKey = response.qrcode_key;
 
       // 开始轮询检查二维码状态
       this.startQRPoll();
@@ -93,7 +51,7 @@ export struct Login {
     // 设置轮询定时器
     this.pollTimer = setInterval(() => {
       this.pollQRStatus();
-    }, QR_POLL_INTERVAL);
+    }, 3000);
   }
 
   async pollQRStatus() {
@@ -102,22 +60,24 @@ export struct Login {
     }
 
     try {
-      const response: QRPollResponse = (await axios.get(
-        'https://passport.bilibili.com/x/passport-login/web/qrcode/poll', {
-        params: { qrcode_key: this.qrCodeKey },
-        headers: { 'User-Agent': this.UserAgent }
-      }
-      )).data;
-
-      const statusCode = response.data.code;
+      const response = await pollQRStatus(this.qrCodeKey);
+      const statusCode = response.code;
 
       // 根据不同状态码更新UI
-      if (statusCode === 86101) {
+      if (statusCode === QR_STATUS.WAITING) {
         this.qrStatus = '等待扫码';
-      } else if (statusCode === 86090) {
+      } else if (statusCode === QR_STATUS.SCANNED) {
         this.qrStatus = '已扫码，请在手机上确认';
-      } else if (statusCode === 0) {
+      } else if (statusCode === QR_STATUS.SUCCESS) {
         this.qrStatus = '登录成功';
+
+        if (response.url) {
+          await saveCookies(response.url)
+        }
+
+        // 获取用户信息
+        const loginRes = await getBiliUserInfo(PreferencesUtil.get<string>('biliCookies'))
+        promptAction.showToast({ message: '登录成功，欢迎使用，亲爱的' + loginRes.uname })
 
         // 清除轮询
         if (this.pollTimer !== -1) {
@@ -125,29 +85,12 @@ export struct Login {
           this.pollTimer = -1;
         }
 
-        // 处理cookie
-        if (response.data.cookie_info && response.data.cookie_info.cookies) {
-          const cookies = response.data.cookie_info.cookies;
-          const cookieString = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
-
-          // 保存cookie到preferences
-          this.saveCookies(cookieString);
-        }
       } else {
-        this.qrStatus = `错误: ${response.data.message}`;
+        this.qrStatus = `错误: ${response.message}`;
       }
     } catch (error) {
       console.error('Error polling QR status:', error);
       this.qrStatus = '检查状态失败';
-    }
-  }
-
-  async saveCookies(cookieString: string) {
-    try {
-      PreferencesUtil.put('biliCookies', cookieString);
-      console.log('Cookies saved successfully');
-    } catch (error) {
-      console.error('Failed to save cookies:', error);
     }
   }
 
